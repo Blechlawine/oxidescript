@@ -1,4 +1,4 @@
-# Rustscript Syntax and its javascript/typescript equivalent
+# Rustscript Syntax and its typescript equivalent
 
 ## Returns without `return`
 
@@ -8,9 +8,9 @@ fn foo() {
 }
 ```
 
-compiles to this javascript:
+compiles to this typescript:
 
-```javascript
+```typescript
 function foo() {
     return "bar";
 }
@@ -32,10 +32,10 @@ fn test(in: Option<boolean>) {
 }
 ```
 
-compiles to this javascript:
+compiles to this typescript:
 
-```javascript
-function test(in) {
+```typescript
+function test(in: boolean | null) {
     let stuff;
     if (in != null) {
         stuff = in;
@@ -47,10 +47,10 @@ function test(in) {
 
 ```
 
-or this javascript:
+or this typescript:
 
-```javascript
-function test(in) {
+```typescript
+function test(in: boolean | null) {
     let stuff = in != null ? in : "Hello";
     return stuff;
 }
@@ -70,10 +70,10 @@ fn matchStuff(in: Option<string>) {
 }
 ```
 
-compiles to this javascript:
+compiles to this typescript:
 
-```javascript
-function matchStuff(in) {
+```typescript
+function matchStuff(in: string | null) {
     switch (in) {
         case null:
             console.error("Hello");
