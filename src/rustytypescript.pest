@@ -1,0 +1,22 @@
+WHITESPACE = _{ " " | NEWLINE | "\t" }
+COMMENT    = _{ "//" ~ ANY }
+
+program = { statement* }
+
+statement = { expression_statement | variable_declaration | if_statement | WHITESPACE }
+
+variable_declaration = {
+    "let" ~ identifier ~ "=" ~ expression ~ ";"
+}
+
+expression_statement = { expression ~ ";" }
+
+if_statement = { "if" ~ expression ~ "{" ~ statement* ~ "}" }
+
+number_literal  = @{ ASCII_DIGIT+ }
+string_literal  = @{ "\"" ~ ANY ~ "\"" }
+boolean_literal = @{ "true" | "false" }
+
+identifier = @{ ASCII_ALPHA+ }
+
+expression = { string_literal | boolean_literal | number_literal | identifier }
