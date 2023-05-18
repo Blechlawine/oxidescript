@@ -1,0 +1,19 @@
+{
+	"formatter": {
+		"indentSize": 4,
+		"indentStyle": "space",
+		"lineWidth": 100,
+		"formatWithErrors": true,
+		"ignore": [".pnp.cjs"]
+	},
+	"linter": {
+		"rules": {
+			"a11y": {
+				"useKeyWithClickEvents": "off"
+			}
+		}
+	},
+	"organizeImports": {
+		"enabled": true
+	}
+}
