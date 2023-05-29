@@ -1,2 +1,2 @@
 [workspace]
-members = ["tree-sitter-rustytypescript", "rustytypescript"]
+members = ["tree-sitter-oxidescript", "oxidescript"]

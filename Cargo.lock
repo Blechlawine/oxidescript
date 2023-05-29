@@ -201,6 +201,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b7e5500299e16ebb147ae15a00a942af264cf3688f47923b8fc2cd5858f23ad3"
 
 [[package]]
+name = "oxidescript"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "tree-sitter",
+ "tree-sitter-oxidescript",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -250,15 +259,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustytypescript"
-version = "0.1.0"
-dependencies = [
- "clap",
- "tree-sitter",
- "tree-sitter-rustytypescript",
-]
-
-[[package]]
 name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -286,7 +286,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tree-sitter-rustytypescript"
+name = "tree-sitter-oxidescript"
 version = "0.0.1"
 dependencies = [
  "cc",

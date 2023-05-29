@@ -1,5 +1,5 @@
 [package]
-name = "rustytypescript"
+name = "oxidescript"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.2.5", features = ["derive"] }
 tree-sitter = "0.20.10"
-tree-sitter-rustytypescript = { path = "../tree-sitter-rustytypescript" }
+tree-sitter-oxidescript = { path = "../tree-sitter-oxidescript" }

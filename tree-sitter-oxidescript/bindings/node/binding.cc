@@ -4,7 +4,7 @@
 
 using namespace v8;
 
-extern "C" TSLanguage * tree_sitter_rustytypescript();
+extern "C" TSLanguage * tree_sitter_oxidescript();
 
 namespace {
 
@@ -17,12 +17,12 @@ void Init(Local<Object> exports, Local<Object> module) {
 
   Local<Function> constructor = Nan::GetFunction(tpl).ToLocalChecked();
   Local<Object> instance = constructor->NewInstance(Nan::GetCurrentContext()).ToLocalChecked();
-  Nan::SetInternalFieldPointer(instance, 0, tree_sitter_rustytypescript());
+  Nan::SetInternalFieldPointer(instance, 0, tree_sitter_oxidescript());
 
-  Nan::Set(instance, Nan::New("name").ToLocalChecked(), Nan::New("rustytypescript").ToLocalChecked());
+  Nan::Set(instance, Nan::New("name").ToLocalChecked(), Nan::New("oxidescript").ToLocalChecked());
   Nan::Set(module, Nan::New("exports").ToLocalChecked(), instance);
 }
 
-NODE_MODULE(tree_sitter_rustytypescript_binding, Init)
+NODE_MODULE(tree_sitter_oxidescript_binding, Init)
 
 }  // namespace

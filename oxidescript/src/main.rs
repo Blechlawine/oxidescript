@@ -1,7 +1,7 @@
 use clap::Parser as ClapParser;
 use std::{fs::read_to_string, path::PathBuf};
 use tree_sitter::Parser;
-use tree_sitter_rustytypescript::language;
+use tree_sitter_oxidescript::language;
 
 #[derive(ClapParser, Debug)]
 #[command(version)]

@@ -1,5 +1,5 @@
 {
-    "name": "tree-sitter-rustytypescript",
+    "name": "tree-sitter-oxidescript",
     "version": "1.0.0",
     "description": "",
     "main": "grammar.js",

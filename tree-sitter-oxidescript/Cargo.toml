@@ -1,10 +1,10 @@
 [package]
-name = "tree-sitter-rustytypescript"
-description = "rustytypescript grammar for the tree-sitter parsing library"
+name = "tree-sitter-oxidescript"
+description = "oxidescript grammar for the tree-sitter parsing library"
 version = "0.0.1"
-keywords = ["incremental", "parsing", "rustytypescript"]
+keywords = ["incremental", "parsing", "oxidescript"]
 categories = ["parsing", "text-editors"]
-repository = "https://github.com/tree-sitter/tree-sitter-rustytypescript"
+repository = "https://github.com/blechlawine/oxidescript"
 edition = "2018"
 license = "MIT"
 
