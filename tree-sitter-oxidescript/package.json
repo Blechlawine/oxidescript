@@ -7,5 +7,15 @@
         "build": "tree-sitter generate"
     },
     "keywords": [],
-    "author": ""
+    "author": "",
+    "tree-sitter": [
+        {
+            "scope": "source.oxidescript",
+            "injection-regex": "oxidescript",
+            "file-types": [
+                "ox",
+                "os"
+            ]
+        }
+    ]
 }
