@@ -1,4 +1,4 @@
-# Rustscript Syntax and its typescript equivalent
+# Oxidescript Syntax and its typescript equivalent
 
 ## Returns without `return`
 
