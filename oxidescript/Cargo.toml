@@ -7,5 +7,4 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.2.5", features = ["derive"] }
-tree-sitter = "0.20.10"
-tree-sitter-oxidescript = { path = "../tree-sitter-oxidescript" }
+nom = "7.1.3"
