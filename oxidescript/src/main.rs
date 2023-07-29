@@ -4,6 +4,7 @@ use std::{fs::read_to_string, path::PathBuf};
 use crate::lexer::Lexer;
 
 pub mod lexer;
+pub mod parser;
 
 #[derive(ClapParser, Debug)]
 #[command(version)]

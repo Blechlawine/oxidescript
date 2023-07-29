@@ -1,4 +1,5 @@
 pub mod token;
+pub mod tokens;
 pub mod utils;
 
 use nom::branch::alt;
@@ -124,6 +125,8 @@ fn lex_keyword_or_ident(input: &[u8]) -> IResult<&[u8], Token> {
                 "in" => Token::In,
                 "break" => Token::Break,
                 "continue" => Token::Continue,
+                "true" => Token::BooleanLiteral(true),
+                "false" => Token::BooleanLiteral(false),
                 // "struct" => Token::Struct,
                 // "enum" => Token::Enum,
                 // "type" => Token::Type,
@@ -338,5 +341,47 @@ mod tests {
                 Token::EOF
             ]
         );
+    }
+
+    #[test]
+    fn keywords() {
+        let input = "
+        const
+        let
+        fn
+        return
+        if
+        else
+        while
+        for
+        in
+        break
+        continue
+        true
+        false
+        "
+        .as_bytes();
+
+        let (rest, tokens) = Lexer::lex_tokens(input).unwrap();
+        assert_eq!(rest, b"");
+        assert_eq!(
+            tokens,
+            vec![
+                Token::Const,
+                Token::Let,
+                Token::Function,
+                Token::Return,
+                Token::If,
+                Token::Else,
+                Token::While,
+                Token::For,
+                Token::In,
+                Token::Break,
+                Token::Continue,
+                Token::BooleanLiteral(true),
+                Token::BooleanLiteral(false),
+                Token::EOF
+            ]
+        )
     }
 }
