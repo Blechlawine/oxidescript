@@ -1,7 +1,9 @@
 use clap::Parser as ClapParser;
+use lexer::tokens::Tokens;
 use std::{fs::read_to_string, path::PathBuf};
 
 use crate::lexer::Lexer;
+use crate::parser::Parser;
 
 pub mod lexer;
 pub mod parser;
@@ -22,7 +24,10 @@ fn main() {
 
         let (unlexed, tokens) = Lexer::lex_tokens(loaded_file.as_bytes()).unwrap();
         dbg!(unlexed);
-        dbg!(tokens);
+        dbg!(&tokens);
+
+        let parsed = Parser::parse(Tokens::new(&tokens)).unwrap();
+        dbg!(parsed);
     }
 }
 
