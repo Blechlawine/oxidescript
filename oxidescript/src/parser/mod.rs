@@ -2,6 +2,7 @@ pub mod ast;
 pub mod atoms;
 pub mod declaration;
 pub mod expression;
+pub mod function;
 pub mod statement;
 
 use nom::bytes::complete::take;
@@ -60,7 +61,7 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::{
-        ast::{Declaration, Expression, Statement},
+        ast::{Block, Declaration, Expression, Statement},
         *,
     };
     use crate::lexer::*;
@@ -120,6 +121,34 @@ mod tests {
                 Expression::LiteralExpression(Literal::StringLiteral("bar".to_string())),
             )),
         ];
+
+        assert_input_with_program(input, program);
+    }
+
+    #[test]
+    fn function_declaration() {
+        let input = "
+            fn test() {\
+                let variable = 5;\
+            }\
+        "
+        .as_bytes();
+
+        let program: Program = vec![Statement::DeclarationStatement(
+            Declaration::FunctionDeclaration {
+                name: Identifier("test".to_string()),
+                parameters: vec![],
+                body: Block {
+                    statements: vec![Statement::DeclarationStatement(
+                        Declaration::LetDeclaration(
+                            Identifier("variable".to_string()),
+                            Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
+                        ),
+                    )],
+                    return_value: None,
+                },
+            },
+        )];
 
         assert_input_with_program(input, program);
     }

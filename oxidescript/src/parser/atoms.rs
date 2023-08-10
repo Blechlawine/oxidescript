@@ -23,6 +23,7 @@ macro_rules! tag_token (
 
 tag_token!(let_tag, Token::Let);
 tag_token!(const_tag, Token::Const);
+tag_token!(function_tag, Token::Function);
 
 tag_token!(assign_tag, Token::Assign);
 tag_token!(plus_tag, Token::Plus);

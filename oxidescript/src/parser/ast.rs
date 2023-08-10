@@ -39,7 +39,10 @@ pub enum Declaration {
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Block(Vec<Statement>, Option<Box<Expression>>);
+pub struct Block {
+    pub statements: Vec<Statement>,
+    pub return_value: Option<Expression>,
+}
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Parameter {
