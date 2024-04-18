@@ -5,6 +5,7 @@ use std::{fs::read_to_string, path::PathBuf};
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 
+pub mod compiler;
 pub mod lexer;
 pub mod parser;
 
@@ -26,8 +27,9 @@ fn main() {
         dbg!(unlexed);
         dbg!(&tokens);
 
-        let parsed = Parser::parse(Tokens::new(&tokens)).unwrap();
-        dbg!(parsed);
+        let (unparsed, ast) = Parser::parse(Tokens::new(&tokens)).unwrap();
+        dbg!(unparsed);
+        dbg!(&ast);
     }
 }
 
