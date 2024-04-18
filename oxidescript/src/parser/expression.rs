@@ -10,9 +10,16 @@ use nom::{branch::alt, combinator::map, error_position, IResult};
 use super::ast::{Precedence, UnaryOperator};
 use super::{ast::Expression, atoms::*, parse_identifier, parse_literal};
 
-pub fn parse_expression(input: Tokens) -> IResult<Tokens, Expression> {
+fn parse_expression_with_precedence(
+    input: Tokens,
+    precedence: Precedence,
+) -> IResult<Tokens, Expression> {
     let (rest, atom) = parse_atom_expression(input)?;
-    parse_pratt_expression(rest, Precedence::PLowest, atom)
+    parse_pratt_expression(rest, precedence, atom)
+}
+
+pub fn parse_expression(input: Tokens) -> IResult<Tokens, Expression> {
+    parse_expression_with_precedence(input, Precedence::PLowest)
 }
 
 fn parse_pratt_expression(
@@ -28,9 +35,11 @@ fn parse_pratt_expression(
         let p = infix_operator(preview);
         match p {
             (Precedence::PCall, _) if precedence < Precedence::PCall => {
+                // parse call expression
                 todo!()
             }
             (Precedence::PIndex, _) if precedence < Precedence::PIndex => {
+                // parse index expression
                 todo!()
             }
             (peek_precedence, _) if precedence < peek_precedence => {
@@ -114,6 +123,26 @@ fn parse_array_expression(input: Tokens) -> IResult<Tokens, Expression> {
 }
 
 fn parse_infix_expression(input: Tokens, left: Expression) -> IResult<Tokens, Expression> {
+    let (rest, operator) = take(1usize)(input)?;
+    if operator.tokens.is_empty() {
+        Err(Err::Error(error_position!(input, ErrorKind::Tag)))
+    } else {
+        let operator_token = &operator.tokens[0];
+        let (precedence, maybe_infix_op) = infix_operator(operator_token);
+        match maybe_infix_op {
+            None => Err(Err::Error(error_position!(input, ErrorKind::Tag))),
+            Some(op) => {
+                let (rest2, right) = parse_expression_with_precedence(rest, precedence)?;
+                Ok((
+                    rest2,
+                    Expression::InfixExpression(op, Box::new(left), Box::new(right)),
+                ))
+            }
+        }
+    }
+}
+
+fn parse_if_expression(input: Tokens) -> IResult<Tokens, Expression> {
     todo!()
 }
 

@@ -61,7 +61,7 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::{
-        ast::{Block, Declaration, Expression, Statement},
+        ast::{Block, Declaration, Expression, InfixOperator, Statement},
         *,
     };
     use crate::lexer::*;
@@ -146,6 +146,64 @@ mod tests {
                         ),
                     )],
                     return_value: None,
+                },
+            },
+        )];
+
+        assert_input_with_program(input, program);
+    }
+
+    #[test]
+    fn infix_expression() {
+        let input = "let foo = 5 - 10 * 2;".as_bytes();
+
+        let program: Program = vec![Statement::DeclarationStatement(
+            Declaration::LetDeclaration(
+                Identifier("foo".to_string()),
+                Expression::InfixExpression(
+                    InfixOperator::Minus,
+                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                        "5".into(),
+                    ))),
+                    Box::new(Expression::InfixExpression(
+                        InfixOperator::Multiply,
+                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                            "10".into(),
+                        ))),
+                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                            "2".into(),
+                        ))),
+                    )),
+                ),
+            ),
+        )];
+
+        assert_input_with_program(input, program);
+    }
+
+    #[test]
+    fn function_implicit_return() {
+        let input = "\
+            fn test() {\
+                5 - 10\
+            }\
+        "
+        .as_bytes();
+        let program: Program = vec![Statement::DeclarationStatement(
+            Declaration::FunctionDeclaration {
+                name: Identifier("test".to_string()),
+                parameters: vec![],
+                body: Block {
+                    statements: vec![],
+                    return_value: Some(Expression::InfixExpression(
+                        InfixOperator::Minus,
+                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                            "5".into(),
+                        ))),
+                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                            "10".into(),
+                        ))),
+                    )),
                 },
             },
         )];

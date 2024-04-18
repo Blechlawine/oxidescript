@@ -2,6 +2,7 @@ pub type Program = Vec<Statement>;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Statement {
+    // TODO: do we have expression statements in this language?
     ExpressionStatement(Expression),
     DeclarationStatement(Declaration),
 }
@@ -14,10 +15,10 @@ pub enum Expression {
     InfixExpression(InfixOperator, Box<Expression>, Box<Expression>),
     ArrayExpression(Vec<Expression>),
     // IfExpression {
-    //     condition: Box<Expression>,
-    //     then_branch: Box<Expression>,
-    //     else_branch: Option<Box<Expression>>,
-    // },
+    //    condition: Box<Expression>,
+    //    then_branch: Box<Expression>,
+    //    else_branch: Option<Box<Expression>>,
+    //},
     // ForExpression {
     //     // TODO
     // },
@@ -25,6 +26,8 @@ pub enum Expression {
     //     // TODO
     // },
     // BlockExpression(Block),
+    // CallExpression,
+    // IndexExpression,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
