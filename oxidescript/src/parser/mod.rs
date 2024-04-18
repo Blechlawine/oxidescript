@@ -210,4 +210,50 @@ mod tests {
 
         assert_input_with_program(input, program);
     }
+
+    #[test]
+    fn expression_statement_mix() {
+        let input = r#"
+            fn test() {
+                5 - 10 * 2;
+                let variable = 5;
+                variable
+            }
+        "#;
+
+        let program: Program = vec![Statement::DeclarationStatement(
+            Declaration::FunctionDeclaration {
+                name: Identifier("test".to_string()),
+                parameters: vec![],
+                body: Block {
+                    statements: vec![
+                        Statement::ExpressionStatement(Expression::InfixExpression(
+                            InfixOperator::Minus,
+                            Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                                "5".into(),
+                            ))),
+                            Box::new(Expression::InfixExpression(
+                                InfixOperator::Multiply,
+                                Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                                    "10".into(),
+                                ))),
+                                Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                                    "2".into(),
+                                ))),
+                            )),
+                        )),
+                        Statement::DeclarationStatement(Declaration::LetDeclaration(
+                            Identifier("variable".to_string()),
+                            Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
+                        )),
+                    ],
+                    return_value: Some(Expression::IdentifierExpression(Identifier(
+                        "variable".to_string(),
+                    ))),
+                },
+            },
+        )];
+
+        assert_input_with_program(input.as_bytes(), program);
+    }
 }

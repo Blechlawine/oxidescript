@@ -1,4 +1,4 @@
-use nom::{combinator::map, IResult};
+use nom::{branch::alt, combinator::map, IResult};
 
 use crate::lexer::tokens::Tokens;
 
@@ -6,7 +6,7 @@ use super::{ast::Statement, declaration::parse_declaration, expression::parse_ex
 
 pub fn parse_statement(input: Tokens) -> IResult<Tokens, Statement> {
     // println!("parse_statement");
-    parse_declaration_statement(input)
+    alt((parse_declaration_statement, parse_expression_statement))(input)
 }
 
 fn parse_declaration_statement(input: Tokens) -> IResult<Tokens, Statement> {
