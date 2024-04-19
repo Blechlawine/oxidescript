@@ -1,6 +1,5 @@
 use crate::lexer::token::Token;
 use crate::lexer::tokens::Tokens;
-use nom::bytes::complete::take;
 use nom::error::ErrorKind;
 use nom::multi::many0;
 use nom::sequence::{delimited, pair, preceded};
@@ -8,47 +7,11 @@ use nom::Err;
 use nom::{branch::alt, combinator::map, error_position, IResult};
 
 use super::ast::{Precedence, UnaryOperator};
+use super::pratt_expression::parse_pratt_expression;
 use super::{ast::Expression, atoms::*, parse_identifier, parse_literal};
 
-fn parse_expression_with_precedence(
-    input: Tokens,
-    precedence: Precedence,
-) -> IResult<Tokens, Expression> {
-    let (rest, atom) = parse_atom_expression(input)?;
-    parse_pratt_expression(rest, precedence, atom)
-}
-
 pub fn parse_expression(input: Tokens) -> IResult<Tokens, Expression> {
-    parse_expression_with_precedence(input, Precedence::PLowest)
-}
-
-fn parse_pratt_expression(
-    input: Tokens,
-    precedence: Precedence,
-    left: Expression,
-) -> IResult<Tokens, Expression> {
-    let (rest, found) = take(1usize)(input)?;
-    if found.tokens.is_empty() {
-        Ok((rest, left))
-    } else {
-        let preview = &found.tokens[0];
-        let p = infix_operator(preview);
-        match p {
-            (Precedence::PCall, _) if precedence < Precedence::PCall => {
-                // parse call expression
-                todo!()
-            }
-            (Precedence::PIndex, _) if precedence < Precedence::PIndex => {
-                // parse index expression
-                todo!()
-            }
-            (peek_precedence, _) if precedence < peek_precedence => {
-                let (rest2, left2) = parse_infix_expression(input, left)?;
-                parse_pratt_expression(rest2, precedence, left2)
-            }
-            _ => Ok((input, left)),
-        }
-    }
+    parse_pratt_expression(input, Precedence::PLowest)
 }
 
 fn parse_expressions(input: Tokens) -> IResult<Tokens, Vec<Expression>> {
@@ -61,7 +24,7 @@ fn parse_expressions(input: Tokens) -> IResult<Tokens, Vec<Expression>> {
     )(input)
 }
 
-fn parse_atom_expression(input: Tokens) -> IResult<Tokens, Expression> {
+pub fn parse_atom_expression(input: Tokens) -> IResult<Tokens, Expression> {
     alt((
         parse_literal_expression,
         parse_identifier_expression,
@@ -120,26 +83,6 @@ fn parse_array_expression(input: Tokens) -> IResult<Tokens, Expression> {
         ),
         Expression::ArrayExpression,
     )(input)
-}
-
-fn parse_infix_expression(input: Tokens, left: Expression) -> IResult<Tokens, Expression> {
-    let (rest, operator) = take(1usize)(input)?;
-    if operator.tokens.is_empty() {
-        Err(Err::Error(error_position!(input, ErrorKind::Tag)))
-    } else {
-        let operator_token = &operator.tokens[0];
-        let (precedence, maybe_infix_op) = infix_operator(operator_token);
-        match maybe_infix_op {
-            None => Err(Err::Error(error_position!(input, ErrorKind::Tag))),
-            Some(op) => {
-                let (rest2, right) = parse_expression_with_precedence(rest, precedence)?;
-                Ok((
-                    rest2,
-                    Expression::InfixExpression(op, Box::new(left), Box::new(right)),
-                ))
-            }
-        }
-    }
 }
 
 fn parse_if_expression(input: Tokens) -> IResult<Tokens, Expression> {

@@ -3,6 +3,7 @@ pub mod atoms;
 pub mod declaration;
 pub mod expression;
 pub mod function;
+pub mod pratt_expression;
 pub mod statement;
 
 use nom::bytes::complete::take;
