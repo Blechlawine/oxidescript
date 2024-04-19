@@ -4,7 +4,7 @@ use crate::parser::ast::{
 };
 
 #[derive(Default, Debug)]
-pub struct JavascriptCompilationOutput {
+struct JavascriptCompilationOutput {
     code: String,
     semicolon_allowed: bool,
 }
@@ -31,7 +31,7 @@ impl FromIterator<JavascriptCompilationOutput> for JavascriptCompilationOutput {
     }
 }
 
-pub trait JavascriptCompile {
+trait JavascriptCompile {
     fn compile(&self) -> JavascriptCompilationOutput;
 }
 
@@ -44,7 +44,9 @@ impl JavascriptCompile for Program {
 impl JavascriptCompile for Statement {
     fn compile(&self) -> JavascriptCompilationOutput {
         let statement = match self {
-            Statement::ExpressionStatement(expr) => expr.compile(),
+            Statement::ExpressionStatement {
+                expression: expr, ..
+            } => expr.compile(),
             Statement::DeclarationStatement(decl) => decl.compile(),
         };
         JavascriptCompilationOutput {
@@ -245,6 +247,15 @@ impl JavascriptCompile for Block {
     }
 }
 
+pub struct JavascriptCompiler;
+
+impl JavascriptCompiler {
+    pub fn compile(program: Program) -> String {
+        let compiled = program.compile();
+        compiled.code
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::parser::ast::{Identifier, Program};
@@ -254,15 +265,20 @@ mod tests {
     #[test]
     fn literals() {
         let program: Program = vec![
-            Statement::ExpressionStatement(Expression::LiteralExpression(Literal::NumberLiteral(
-                "5".to_string(),
-            ))),
-            Statement::ExpressionStatement(Expression::LiteralExpression(Literal::StringLiteral(
-                "foo".to_string(),
-            ))),
-            Statement::ExpressionStatement(Expression::LiteralExpression(Literal::BooleanLiteral(
-                true,
-            ))),
+            Statement::ExpressionStatement {
+                expression: Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
+                has_semicolon: true,
+            },
+            Statement::ExpressionStatement {
+                expression: Expression::LiteralExpression(Literal::StringLiteral(
+                    "foo".to_string(),
+                )),
+                has_semicolon: true,
+            },
+            Statement::ExpressionStatement {
+                expression: Expression::LiteralExpression(Literal::BooleanLiteral(true)),
+                has_semicolon: true,
+            },
         ];
 
         assert_eq!("5;\n\"foo\";\ntrue;\n".to_string(), program.compile().code);
@@ -271,31 +287,42 @@ mod tests {
     #[test]
     fn expressions() {
         let program: Program = vec![
-            Statement::ExpressionStatement(Expression::IdentifierExpression(Identifier(
-                "test".to_string(),
-            ))),
-            Statement::ExpressionStatement(Expression::LiteralExpression(Literal::NumberLiteral(
-                "5".to_string(),
-            ))),
-            Statement::ExpressionStatement(Expression::UnaryExpression(
-                UnaryOperator::Minus,
-                Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                    "5".to_string(),
-                ))),
-            )),
-            Statement::ExpressionStatement(Expression::InfixExpression(
-                InfixOperator::Plus,
-                Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                    "5".to_string(),
-                ))),
-                Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                    "5".to_string(),
-                ))),
-            )),
-            Statement::ExpressionStatement(Expression::ArrayExpression(vec![
-                Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
-                Expression::LiteralExpression(Literal::NumberLiteral("10".to_string())),
-            ])),
+            Statement::ExpressionStatement {
+                expression: Expression::IdentifierExpression(Identifier("test".to_string())),
+                has_semicolon: true,
+            },
+            Statement::ExpressionStatement {
+                expression: Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
+                has_semicolon: true,
+            },
+            Statement::ExpressionStatement {
+                expression: Expression::UnaryExpression(
+                    UnaryOperator::Minus,
+                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                        "5".to_string(),
+                    ))),
+                ),
+                has_semicolon: true,
+            },
+            Statement::ExpressionStatement {
+                expression: Expression::InfixExpression(
+                    InfixOperator::Plus,
+                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                        "5".to_string(),
+                    ))),
+                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                        "5".to_string(),
+                    ))),
+                ),
+                has_semicolon: true,
+            },
+            Statement::ExpressionStatement {
+                expression: Expression::ArrayExpression(vec![
+                    Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
+                    Expression::LiteralExpression(Literal::NumberLiteral("10".to_string())),
+                ]),
+                has_semicolon: true,
+            },
         ];
         assert_eq!(
             "test;\n5;\n-5;\n5 + 5;\n[5, 10];\n".to_string(),
@@ -382,21 +409,24 @@ mod tests {
                     )),
                 },
             }),
-            Statement::ExpressionStatement(Expression::CallExpression(
-                Identifier("foo".into()),
-                vec![
-                    Expression::LiteralExpression(Literal::NumberLiteral("20".into())),
-                    Expression::InfixExpression(
-                        InfixOperator::Minus,
-                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                            "30".into(),
-                        ))),
-                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                            "2".into(),
-                        ))),
-                    ),
-                ],
-            )),
+            Statement::ExpressionStatement {
+                expression: Expression::CallExpression(
+                    Identifier("foo".into()),
+                    vec![
+                        Expression::LiteralExpression(Literal::NumberLiteral("20".into())),
+                        Expression::InfixExpression(
+                            InfixOperator::Minus,
+                            Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                                "30".into(),
+                            ))),
+                            Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                                "2".into(),
+                            ))),
+                        ),
+                    ],
+                ),
+                has_semicolon: true,
+            },
         ];
         // TODO: add function call expression and more
 

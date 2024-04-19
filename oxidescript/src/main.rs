@@ -2,6 +2,7 @@ use clap::Parser as ClapParser;
 use lexer::tokens::Tokens;
 use std::{fs::read_to_string, path::PathBuf};
 
+use crate::compiler::JavascriptCompiler;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
 
@@ -30,6 +31,9 @@ fn main() {
         let (unparsed, ast) = Parser::parse(Tokens::new(&tokens)).unwrap();
         dbg!(unparsed);
         dbg!(&ast);
+
+        let compiled = JavascriptCompiler::compile(ast);
+        println!("{}", compiled);
     }
 }
 

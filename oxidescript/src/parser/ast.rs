@@ -2,8 +2,10 @@ pub type Program = Vec<Statement>;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Statement {
-    // TODO: do we have expression statements in this language?
-    ExpressionStatement(Expression),
+    ExpressionStatement {
+        expression: Expression,
+        has_semicolon: bool,
+    },
     DeclarationStatement(Declaration),
 }
 

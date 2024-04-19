@@ -229,41 +229,44 @@ mod tests {
                 parameters: vec![],
                 body: Block {
                     statements: vec![
-                        Statement::ExpressionStatement(Expression::InfixExpression(
-                            InfixOperator::Plus,
-                            Box::new(Expression::InfixExpression(
-                                InfixOperator::Minus,
-                                Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                                    "5".into(),
-                                ))),
+                        Statement::ExpressionStatement {
+                            expression: Expression::InfixExpression(
+                                InfixOperator::Plus,
                                 Box::new(Expression::InfixExpression(
-                                    InfixOperator::Multiply,
+                                    InfixOperator::Minus,
                                     Box::new(Expression::LiteralExpression(
-                                        Literal::NumberLiteral("10".into()),
+                                        Literal::NumberLiteral("5".into()),
                                     )),
-                                    Box::new(Expression::LiteralExpression(
-                                        Literal::NumberLiteral("2".into()),
+                                    Box::new(Expression::InfixExpression(
+                                        InfixOperator::Multiply,
+                                        Box::new(Expression::LiteralExpression(
+                                            Literal::NumberLiteral("10".into()),
+                                        )),
+                                        Box::new(Expression::LiteralExpression(
+                                            Literal::NumberLiteral("2".into()),
+                                        )),
                                     )),
                                 )),
-                            )),
-                            Box::new(Expression::CallExpression(
-                                Identifier("foo".to_string()),
-                                vec![
-                                    Expression::LiteralExpression(Literal::NumberLiteral(
-                                        "20".to_string(),
-                                    )),
-                                    Expression::InfixExpression(
-                                        InfixOperator::Minus,
-                                        Box::new(Expression::LiteralExpression(
-                                            Literal::NumberLiteral("30".to_string()),
+                                Box::new(Expression::CallExpression(
+                                    Identifier("foo".to_string()),
+                                    vec![
+                                        Expression::LiteralExpression(Literal::NumberLiteral(
+                                            "20".to_string(),
                                         )),
-                                        Box::new(Expression::LiteralExpression(
-                                            Literal::NumberLiteral("2".to_string()),
-                                        )),
-                                    ),
-                                ],
-                            )),
-                        )),
+                                        Expression::InfixExpression(
+                                            InfixOperator::Minus,
+                                            Box::new(Expression::LiteralExpression(
+                                                Literal::NumberLiteral("30".to_string()),
+                                            )),
+                                            Box::new(Expression::LiteralExpression(
+                                                Literal::NumberLiteral("2".to_string()),
+                                            )),
+                                        ),
+                                    ],
+                                )),
+                            ),
+                            has_semicolon: true,
+                        },
                         Statement::DeclarationStatement(Declaration::LetDeclaration(
                             Identifier("variable".to_string()),
                             Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
@@ -274,10 +277,10 @@ mod tests {
                     ))),
                 },
             }),
-            Statement::ExpressionStatement(Expression::CallExpression(
-                Identifier("test".to_string()),
-                vec![],
-            )),
+            Statement::ExpressionStatement {
+                expression: Expression::CallExpression(Identifier("test".to_string()), vec![]),
+                has_semicolon: true,
+            },
         ];
 
         assert_input_with_program(input.as_bytes(), program);

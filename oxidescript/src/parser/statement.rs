@@ -1,4 +1,9 @@
-use nom::{branch::alt, combinator::map, sequence::tuple, IResult};
+use nom::{
+    branch::alt,
+    combinator::{map, opt},
+    sequence::tuple,
+    IResult,
+};
 
 use crate::lexer::tokens::Tokens;
 
@@ -23,7 +28,10 @@ fn parse_declaration_statement(input: Tokens) -> IResult<Tokens, Statement> {
 fn parse_expression_statement(input: Tokens) -> IResult<Tokens, Statement> {
     // println!("parse_expression_statement");
     map(
-        tuple((parse_expression, semicolon_tag)),
-        |(expression, _)| Statement::ExpressionStatement(expression),
+        tuple((parse_expression, opt(semicolon_tag))),
+        |(expression, semicolon)| Statement::ExpressionStatement {
+            expression,
+            has_semicolon: semicolon.is_some(),
+        },
     )(input)
 }

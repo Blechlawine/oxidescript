@@ -29,7 +29,11 @@ pub fn parse_block(input: Tokens) -> IResult<Tokens, Block> {
             // Automatically select last expression statement as return value if no return value exists
             if return_value.is_none() {
                 if let Some(last) = statements.last() {
-                    if let Statement::ExpressionStatement(last) = last.clone() {
+                    if let Statement::ExpressionStatement {
+                        expression: last,
+                        has_semicolon: false,
+                    } = last.clone()
+                    {
                         return Block {
                             statements: statements.drain(..statements.len() - 1).collect(),
                             return_value: Some(last),
