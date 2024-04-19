@@ -360,8 +360,8 @@ mod tests {
 
     #[test]
     fn code_snippet() {
-        let program: Program = vec![Statement::DeclarationStatement(
-            Declaration::FunctionDeclaration {
+        let program: Program = vec![
+            Statement::DeclarationStatement(Declaration::FunctionDeclaration {
                 name: Identifier("foo".into()),
                 parameters: vec![
                     Parameter {
@@ -381,12 +381,27 @@ mod tests {
                         Box::new(Expression::IdentifierExpression(Identifier("baz".into()))),
                     )),
                 },
-            },
-        )];
+            }),
+            Statement::ExpressionStatement(Expression::CallExpression(
+                Identifier("foo".into()),
+                vec![
+                    Expression::LiteralExpression(Literal::NumberLiteral("20".into())),
+                    Expression::InfixExpression(
+                        InfixOperator::Minus,
+                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                            "30".into(),
+                        ))),
+                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                            "2".into(),
+                        ))),
+                    ),
+                ],
+            )),
+        ];
         // TODO: add function call expression and more
 
         assert_eq!(
-            "function foo(bar, baz) {\nreturn bar + baz;\n}\n".to_string(),
+            "function foo(bar, baz) {\nreturn bar + baz;\n}\nfoo(20, 30 - 2);\n".to_string(),
             program.compile().code
         );
     }
