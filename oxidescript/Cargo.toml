@@ -3,8 +3,9 @@ name = "oxidescript"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "oxidescript"
+path = "src/lib.rs"
 
 [dependencies]
-clap = { version = "4.2.5", features = ["derive"] }
 nom = "7.1.3"
