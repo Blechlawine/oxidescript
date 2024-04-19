@@ -1,6 +1,7 @@
 use std::{
     fs::read_to_string,
     path::{Path, PathBuf},
+    process::Command,
 };
 
 use clap::Parser as ClapParser;
@@ -13,66 +14,124 @@ use oxidescript::{
 #[derive(clap::Parser, Debug)]
 #[command(version)]
 struct Args {
-    #[arg(short, long, action = clap::ArgAction::Append)]
-    inputs: Vec<String>,
+    #[arg(short, long)]
+    input: PathBuf,
 
     #[arg(short, long, action = clap::ArgAction::SetTrue)]
     verbose: bool,
 
     #[command(subcommand)]
-    command: Command,
+    command: OxideCommand,
 }
 
 #[derive(clap::Subcommand, Debug, Clone)]
-enum Command {
+enum OxideCommand {
     /// Compile files
     Compile {
         #[arg(short, long)]
         outdir: PathBuf,
     },
+    Run {
+        #[arg(short, long)]
+        with: Option<JavascriptRuntime>,
+
+        #[arg(short, long)]
+        devdir: PathBuf,
+    },
+}
+
+#[derive(Clone, Debug, Default)]
+enum JavascriptRuntime {
+    #[default]
+    Bun,
+    Node,
+}
+
+impl JavascriptRuntime {
+    fn run(&self, path: &Path) -> Result<std::process::Child, std::io::Error> {
+        let cmd = match self {
+            Self::Bun => "bun",
+            Self::Node => "node",
+        };
+        Command::new(cmd).arg(path).spawn()
+    }
+}
+
+impl From<&str> for JavascriptRuntime {
+    fn from(value: &str) -> Self {
+        match value {
+            "bun" => Self::Bun,
+            "node" => Self::Node,
+            _ => Self::default(),
+        }
+    }
+}
+
+struct Context {
+    verbose: bool,
 }
 
 fn main() {
     let args = Args::parse();
 
+    let ctx = Context {
+        verbose: args.verbose,
+    };
+
     match args.command {
-        Command::Compile { outdir } => {
+        OxideCommand::Compile { outdir } => {
             if outdir.exists() {
                 std::fs::remove_dir_all(&outdir).unwrap();
             }
             std::fs::create_dir_all(&outdir).unwrap();
 
-            for file in args.inputs {
-                let file_path = PathBuf::from(&file);
-                let loaded_file = load_file(&file_path);
-                if args.verbose {
-                    println!("Loaded file: {:?}", &loaded_file);
-                }
-
-                let (unlexed, tokens) = Lexer::lex_tokens(loaded_file.as_bytes()).unwrap();
-                if args.verbose {
-                    println!("Unlexed: {:?}", unlexed);
-                    println!("Tokens: {:#?}", tokens);
-                }
-
-                let (unparsed, ast) = Parser::parse(Tokens::new(&tokens)).unwrap();
-                if args.verbose {
-                    println!("Unparsed: {:?}", unparsed);
-                    println!("AST: {:#?}", &ast);
-                }
-
-                let compiled = JavascriptCompiler::compile(ast);
-                if args.verbose {
-                    println!("{}", compiled);
-                }
-
-                let new_file_name =
-                    format!("{}.js", file_path.file_stem().unwrap().to_str().unwrap());
-                let compiled_path = outdir.join(new_file_name);
-                std::fs::write(compiled_path, compiled).unwrap();
+            let compiled = compile_file(&args.input, &ctx);
+            let new_file_name = format!("{}.js", args.input.file_stem().unwrap().to_str().unwrap());
+            let compiled_path = outdir.join(new_file_name);
+            std::fs::write(compiled_path, compiled).unwrap();
+        }
+        OxideCommand::Run { with, devdir } => {
+            if devdir.exists() {
+                std::fs::remove_dir_all(&devdir).unwrap();
             }
+            std::fs::create_dir_all(&devdir).unwrap();
+
+            let with = with.unwrap_or_default();
+
+            let compiled = compile_file(&args.input, &ctx);
+            let new_file_name = format!("{}.js", args.input.file_stem().unwrap().to_str().unwrap());
+            let compiled_path = devdir.join(new_file_name);
+            std::fs::write(&compiled_path, compiled).unwrap();
+
+            with.run(&compiled_path).unwrap().wait().unwrap();
         }
     }
+}
+
+fn compile_file(path: &Path, ctx: &Context) -> String {
+    let loaded_file = load_file(path);
+    if ctx.verbose {
+        println!("Loaded file: {:?}", &loaded_file);
+    }
+
+    let (unlexed, tokens) = Lexer::lex_tokens(loaded_file.as_bytes()).unwrap();
+    if ctx.verbose {
+        println!("Unlexed: {:?}", unlexed);
+        println!("Tokens: {:#?}", tokens);
+    }
+
+    let (unparsed, ast) = Parser::parse(Tokens::new(&tokens)).unwrap();
+    if ctx.verbose {
+        println!("Unparsed: {:?}", unparsed);
+        println!("AST: {:#?}", &ast);
+    }
+
+    let compiled = JavascriptCompiler::compile(ast);
+    if ctx.verbose {
+        println!("{}", compiled);
+    }
+
+    compiled
 }
 
 fn load_file(path: &Path) -> String {
