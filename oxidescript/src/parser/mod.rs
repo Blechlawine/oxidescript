@@ -216,31 +216,52 @@ mod tests {
     fn expression_statement_mix() {
         let input = r#"
             fn test() {
-                5 - 10 * 2;
+                5 - 10 * 2 + foo(20, 30 - 2);
                 let variable = 5;
                 variable
             }
+            test();
         "#;
 
-        let program: Program = vec![Statement::DeclarationStatement(
-            Declaration::FunctionDeclaration {
+        let program: Program = vec![
+            Statement::DeclarationStatement(Declaration::FunctionDeclaration {
                 name: Identifier("test".to_string()),
                 parameters: vec![],
                 body: Block {
                     statements: vec![
                         Statement::ExpressionStatement(Expression::InfixExpression(
-                            InfixOperator::Minus,
-                            Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                                "5".into(),
-                            ))),
+                            InfixOperator::Plus,
                             Box::new(Expression::InfixExpression(
-                                InfixOperator::Multiply,
+                                InfixOperator::Minus,
                                 Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                                    "10".into(),
+                                    "5".into(),
                                 ))),
-                                Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                                    "2".into(),
-                                ))),
+                                Box::new(Expression::InfixExpression(
+                                    InfixOperator::Multiply,
+                                    Box::new(Expression::LiteralExpression(
+                                        Literal::NumberLiteral("10".into()),
+                                    )),
+                                    Box::new(Expression::LiteralExpression(
+                                        Literal::NumberLiteral("2".into()),
+                                    )),
+                                )),
+                            )),
+                            Box::new(Expression::CallExpression(
+                                Identifier("foo".to_string()),
+                                vec![
+                                    Expression::LiteralExpression(Literal::NumberLiteral(
+                                        "20".to_string(),
+                                    )),
+                                    Expression::InfixExpression(
+                                        InfixOperator::Minus,
+                                        Box::new(Expression::LiteralExpression(
+                                            Literal::NumberLiteral("30".to_string()),
+                                        )),
+                                        Box::new(Expression::LiteralExpression(
+                                            Literal::NumberLiteral("2".to_string()),
+                                        )),
+                                    ),
+                                ],
                             )),
                         )),
                         Statement::DeclarationStatement(Declaration::LetDeclaration(
@@ -252,8 +273,12 @@ mod tests {
                         "variable".to_string(),
                     ))),
                 },
-            },
-        )];
+            }),
+            Statement::ExpressionStatement(Expression::CallExpression(
+                Identifier("test".to_string()),
+                vec![],
+            )),
+        ];
 
         assert_input_with_program(input.as_bytes(), program);
     }

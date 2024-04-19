@@ -90,6 +90,14 @@ impl JavascriptCompile for Expression {
                     semicolon_allowed: true,
                 }
             }
+            Expression::CallExpression(ident, args) => {
+                let ident = ident.0.clone();
+                let args = args.compile();
+                JavascriptCompilationOutput {
+                    code: format!("{}({})", ident, args.code),
+                    semicolon_allowed: true,
+                }
+            }
         }
     }
 }

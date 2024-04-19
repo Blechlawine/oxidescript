@@ -31,10 +31,6 @@ fn parse_pratt_expression1(
         let preview = &found.tokens[0];
         let p = infix_operator(preview);
         match p {
-            (Precedence::PCall, _) if precedence < Precedence::PCall => {
-                // parse call expression
-                todo!()
-            }
             (Precedence::PIndex, _) if precedence < Precedence::PIndex => {
                 // parse index expression
                 todo!()

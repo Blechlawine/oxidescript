@@ -68,8 +68,8 @@ pub fn infix_operator(token: &Token) -> (Precedence, Option<InfixOperator>) {
         Token::Multiply => (Precedence::PProduct, Some(InfixOperator::Multiply)),
         Token::Divide => (Precedence::PProduct, Some(InfixOperator::Divide)),
         Token::Modulo => (Precedence::PProduct, Some(InfixOperator::Modulo)),
-        Token::LParen => (Precedence::PCall, None),
-        Token::LBracket => (Precedence::PIndex, None),
+        //Token::LParen => (Precedence::PCall, None),
+        //Token::LBracket => (Precedence::PIndex, None),
         _ => (Precedence::PLowest, None),
     }
 }

@@ -1,8 +1,9 @@
 use crate::lexer::token::Token;
 use crate::lexer::tokens::Tokens;
+use nom::combinator::opt;
 use nom::error::ErrorKind;
 use nom::multi::many0;
-use nom::sequence::{delimited, pair, preceded};
+use nom::sequence::{delimited, pair, preceded, tuple};
 use nom::Err;
 use nom::{branch::alt, combinator::map, error_position, IResult};
 
@@ -26,6 +27,7 @@ fn parse_expressions(input: Tokens) -> IResult<Tokens, Vec<Expression>> {
 
 pub fn parse_atom_expression(input: Tokens) -> IResult<Tokens, Expression> {
     alt((
+        parse_call_expression,
         parse_literal_expression,
         parse_identifier_expression,
         parse_unary_expression,
@@ -85,8 +87,16 @@ fn parse_array_expression(input: Tokens) -> IResult<Tokens, Expression> {
     )(input)
 }
 
-fn parse_if_expression(input: Tokens) -> IResult<Tokens, Expression> {
-    todo!()
+pub fn parse_call_expression(input: Tokens) -> IResult<Tokens, Expression> {
+    map(
+        tuple((
+            parse_identifier,
+            l_paren_tag,
+            opt(parse_expressions),
+            r_paren_tag,
+        )),
+        |(name, _, args, _)| Expression::CallExpression(name, args.unwrap_or(vec![])),
+    )(input)
 }
 
 fn empty_boxed_vec(input: Tokens) -> IResult<Tokens, Vec<Expression>> {

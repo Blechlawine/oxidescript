@@ -26,7 +26,7 @@ pub enum Expression {
     //     // TODO
     // },
     // BlockExpression(Block),
-    // CallExpression,
+    CallExpression(Identifier, Vec<Expression>),
     // IndexExpression,
 }
 
