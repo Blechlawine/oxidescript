@@ -48,6 +48,7 @@ tag_token!(r_squirly_tag, Token::RSquirly);
 
 tag_token!(comma_tag, Token::Comma);
 tag_token!(colon_tag, Token::Colon);
+tag_token!(period_tag, Token::Period);
 
 tag_token!(semicolon_tag, Token::SemiColon);
 tag_token!(eof_tag, Token::EOF);
@@ -68,8 +69,9 @@ pub fn infix_operator(token: &Token) -> (Precedence, Option<InfixOperator>) {
         Token::Multiply => (Precedence::PProduct, Some(InfixOperator::Multiply)),
         Token::Divide => (Precedence::PProduct, Some(InfixOperator::Divide)),
         Token::Modulo => (Precedence::PProduct, Some(InfixOperator::Modulo)),
-        //Token::LParen => (Precedence::PCall, None),
-        //Token::LBracket => (Precedence::PIndex, None),
+        Token::LParen => (Precedence::PCall, None),
+        Token::Period => (Precedence::PMemberAccess, None),
+        Token::LBracket => (Precedence::PIndex, None),
         _ => (Precedence::PLowest, None),
     }
 }

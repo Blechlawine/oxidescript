@@ -25,6 +25,7 @@ pub enum Token {
     Assign,
 
     // Punctuation
+    Period,
     Comma,
     Colon,
     SemiColon,

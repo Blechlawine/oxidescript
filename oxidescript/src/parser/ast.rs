@@ -28,8 +28,9 @@ pub enum Expression {
     //     // TODO
     // },
     // BlockExpression(Block),
-    CallExpression(Identifier, Vec<Expression>),
+    CallExpression(Box<Expression>, Vec<Expression>),
     // IndexExpression,
+    MemberAccessExpression(Box<Expression>, Identifier),
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -95,5 +96,6 @@ pub enum Precedence {
     PSum,
     PProduct,
     PCall,
+    PMemberAccess,
     PIndex,
 }

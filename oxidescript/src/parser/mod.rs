@@ -221,6 +221,7 @@ mod tests {
                 variable
             }
             test();
+            console.log("Hello world");
         "#;
 
         let program: Program = vec![
@@ -248,7 +249,9 @@ mod tests {
                                     )),
                                 )),
                                 Box::new(Expression::CallExpression(
-                                    Identifier("foo".to_string()),
+                                    Box::new(Expression::IdentifierExpression(Identifier(
+                                        "foo".to_string(),
+                                    ))),
                                     vec![
                                         Expression::LiteralExpression(Literal::NumberLiteral(
                                             "20".to_string(),
@@ -278,7 +281,26 @@ mod tests {
                 },
             }),
             Statement::ExpressionStatement {
-                expression: Expression::CallExpression(Identifier("test".to_string()), vec![]),
+                expression: Expression::CallExpression(
+                    Box::new(Expression::IdentifierExpression(Identifier(
+                        "test".to_string(),
+                    ))),
+                    vec![],
+                ),
+                has_semicolon: true,
+            },
+            Statement::ExpressionStatement {
+                expression: Expression::CallExpression(
+                    Box::new(Expression::MemberAccessExpression(
+                        Box::new(Expression::IdentifierExpression(Identifier(
+                            "console".into(),
+                        ))),
+                        Identifier("log".into()),
+                    )),
+                    vec![Expression::LiteralExpression(Literal::StringLiteral(
+                        "Hello world".into(),
+                    ))],
+                ),
                 has_semicolon: true,
             },
         ];

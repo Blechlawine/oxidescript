@@ -93,10 +93,18 @@ impl JavascriptCompile for Expression {
                 }
             }
             Expression::CallExpression(ident, args) => {
-                let ident = ident.0.clone();
+                let ident = ident.compile();
                 let args = args.compile();
                 JavascriptCompilationOutput {
-                    code: format!("{}({})", ident, args.code),
+                    code: format!("{}({})", ident.code, args.code),
+                    semicolon_allowed: true,
+                }
+            }
+            Expression::MemberAccessExpression(expr, ident) => {
+                let expr = expr.compile();
+                let ident = ident.0.clone();
+                JavascriptCompilationOutput {
+                    code: format!("{}.{}", expr.code, ident),
                     semicolon_allowed: true,
                 }
             }
@@ -411,7 +419,7 @@ mod tests {
             }),
             Statement::ExpressionStatement {
                 expression: Expression::CallExpression(
-                    Identifier("foo".into()),
+                    Box::new(Expression::IdentifierExpression(Identifier("foo".into()))),
                     vec![
                         Expression::LiteralExpression(Literal::NumberLiteral("20".into())),
                         Expression::InfixExpression(

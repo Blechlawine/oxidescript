@@ -59,6 +59,7 @@ pub fn lex_operator(input: &[u8]) -> IResult<&[u8], Token> {
 
 // punctuation
 syntax!(comma_punctuation, ",", Token::Comma);
+syntax!(period_punctuation, ".", Token::Period);
 syntax!(colon_punctuation, ":", Token::Colon);
 syntax!(semi_colon_punctuation, ";", Token::SemiColon);
 syntax!(l_paren_punctuation, "(", Token::LParen);
@@ -71,6 +72,7 @@ syntax!(r_squirly_punctuation, "}", Token::RSquirly);
 pub fn lex_punctuation(input: &[u8]) -> IResult<&[u8], Token> {
     alt((
         comma_punctuation,
+        period_punctuation,
         colon_punctuation,
         semi_colon_punctuation,
         l_paren_punctuation,
@@ -208,7 +210,7 @@ mod tests {
 
     #[test]
     fn operators_punctuation() {
-        let input = b"=+/*%-()[]{},;:";
+        let input = b"=+/*%-()[]{},;:.";
         let (rest, tokens) = Lexer::lex_tokens(input).unwrap();
         assert_eq!(rest, b"");
         assert_eq!(
@@ -229,6 +231,7 @@ mod tests {
                 Token::Comma,
                 Token::SemiColon,
                 Token::Colon,
+                Token::Period,
                 Token::EOF,
             ]
         )
