@@ -282,6 +282,33 @@ mod tests {
     }
 
     #[test]
+    fn block_expression() {
+        let input = r#"
+            {
+                5 - 10
+            }
+        "#;
+
+        let program: Program = vec![Statement::ExpressionStatement {
+            expression: Expression::BlockExpression(Box::new(Block {
+                statements: vec![],
+                return_value: Some(Expression::InfixExpression(
+                    InfixOperator::Minus,
+                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                        "5".to_string(),
+                    ))),
+                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                        "10".to_string(),
+                    ))),
+                )),
+            })),
+            has_semicolon: false,
+        }];
+
+        assert_input_with_program(input.as_bytes(), program);
+    }
+
+    #[test]
     fn expression_statement_mix() {
         let input = r#"
             fn test() {

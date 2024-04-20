@@ -4,3 +4,8 @@ fn main() {
     let test = "World";
     println(test);
 }
+
+{
+    let bar = 1;
+    bar
+}[0];

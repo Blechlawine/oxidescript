@@ -17,17 +17,17 @@ pub enum Expression {
     InfixExpression(InfixOperator, Box<Expression>, Box<Expression>),
     ArrayExpression(Vec<Expression>),
     // IfExpression {
-    //    condition: Box<Expression>,
-    //    then_branch: Box<Expression>,
-    //    else_branch: Option<Box<Expression>>,
-    //},
+    //     condition: Box<Expression>,
+    //     then_branch: Box<Expression>,
+    //     else_branch: Option<Box<Expression>>,
+    // },
     // ForExpression {
     //     // TODO
     // },
     // MatchExpression {
     //     // TODO
     // },
-    // BlockExpression(Block),
+    BlockExpression(Box<Block>),
     CallExpression(Box<Expression>, Vec<Expression>),
     IndexExpression(Box<Expression>, Box<Expression>),
     MemberAccessExpression(Box<Expression>, Identifier),

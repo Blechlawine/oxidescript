@@ -7,6 +7,7 @@ use nom::Err;
 use nom::{branch::alt, combinator::map, error_position, IResult};
 
 use super::ast::{Precedence, UnaryOperator};
+use super::function::parse_block;
 use super::pratt_expression::parse_pratt_expression;
 use super::{ast::Expression, atoms::*, parse_identifier, parse_literal};
 
@@ -31,6 +32,7 @@ pub fn parse_atom_expression(input: Tokens) -> IResult<Tokens, Expression> {
         parse_unary_expression,
         parse_paren_expression,
         parse_array_expression,
+        parse_block_expression,
     ))(input)
 }
 
@@ -82,6 +84,13 @@ fn parse_array_expression(input: Tokens) -> IResult<Tokens, Expression> {
             r_bracket_tag,
         ),
         Expression::ArrayExpression,
+    )(input)
+}
+
+fn parse_block_expression(input: Tokens) -> IResult<Tokens, Expression> {
+    map(
+        delimited(l_squirly_tag, parse_block, r_squirly_tag),
+        |block| Expression::BlockExpression(Box::new(block)),
     )(input)
 }
 
