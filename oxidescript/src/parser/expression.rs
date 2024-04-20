@@ -2,7 +2,7 @@ use crate::lexer::token::Token;
 use crate::lexer::tokens::Tokens;
 use nom::error::ErrorKind;
 use nom::multi::many0;
-use nom::sequence::{delimited, pair, preceded, tuple};
+use nom::sequence::{delimited, pair, preceded};
 use nom::Err;
 use nom::{branch::alt, combinator::map, error_position, IResult};
 

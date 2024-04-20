@@ -213,6 +213,75 @@ mod tests {
     }
 
     #[test]
+    fn index_expression() {
+        let input = r#"
+        array[1];
+        array[1 + 2];
+        "#;
+
+        let program: Program = vec![
+            Statement::ExpressionStatement {
+                expression: Expression::IndexExpression(
+                    Box::new(Expression::IdentifierExpression(Identifier(
+                        "array".to_string(),
+                    ))),
+                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                        "1".to_string(),
+                    ))),
+                ),
+                has_semicolon: true,
+            },
+            Statement::ExpressionStatement {
+                expression: Expression::IndexExpression(
+                    Box::new(Expression::IdentifierExpression(Identifier(
+                        "array".to_string(),
+                    ))),
+                    Box::new(Expression::InfixExpression(
+                        InfixOperator::Plus,
+                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                            "1".to_string(),
+                        ))),
+                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                            "2".to_string(),
+                        ))),
+                    )),
+                ),
+                has_semicolon: true,
+            },
+        ];
+
+        assert_input_with_program(input.as_bytes(), program);
+    }
+
+    #[test]
+    fn call_expression() {
+        let input = "foo(20, 30 - 2);".as_bytes();
+
+        let program: Program = vec![Statement::ExpressionStatement {
+            expression: Expression::CallExpression(
+                Box::new(Expression::IdentifierExpression(Identifier(
+                    "foo".to_string(),
+                ))),
+                vec![
+                    Expression::LiteralExpression(Literal::NumberLiteral("20".to_string())),
+                    Expression::InfixExpression(
+                        InfixOperator::Minus,
+                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                            "30".to_string(),
+                        ))),
+                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                            "2".to_string(),
+                        ))),
+                    ),
+                ],
+            ),
+            has_semicolon: true,
+        }];
+
+        assert_input_with_program(input, program);
+    }
+
+    #[test]
     fn expression_statement_mix() {
         let input = r#"
             fn test() {
@@ -222,6 +291,7 @@ mod tests {
             }
             test();
             console.log("Hello world");
+            array[1];
         "#;
 
         let program: Program = vec![
@@ -300,6 +370,17 @@ mod tests {
                     vec![Expression::LiteralExpression(Literal::StringLiteral(
                         "Hello world".into(),
                     ))],
+                ),
+                has_semicolon: true,
+            },
+            Statement::ExpressionStatement {
+                expression: Expression::IndexExpression(
+                    Box::new(Expression::IdentifierExpression(Identifier(
+                        "array".to_string(),
+                    ))),
+                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                        "1".to_string(),
+                    ))),
                 ),
                 has_semicolon: true,
             },

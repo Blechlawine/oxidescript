@@ -29,7 +29,7 @@ pub enum Expression {
     // },
     // BlockExpression(Block),
     CallExpression(Box<Expression>, Vec<Expression>),
-    // IndexExpression,
+    IndexExpression(Box<Expression>, Box<Expression>),
     MemberAccessExpression(Box<Expression>, Identifier),
 }
 

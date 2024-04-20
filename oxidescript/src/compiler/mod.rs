@@ -108,6 +108,14 @@ impl JavascriptCompile for Expression {
                     semicolon_allowed: true,
                 }
             }
+            Expression::IndexExpression(expr, index_expr) => {
+                let expr = expr.compile();
+                let index_expr = index_expr.compile();
+                JavascriptCompilationOutput {
+                    code: format!("{}[{}]", expr.code, index_expr.code),
+                    semicolon_allowed: true,
+                }
+            }
         }
     }
 }

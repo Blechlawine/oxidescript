@@ -7,8 +7,8 @@ use nom::{bytes::complete::take, IResult};
 
 use crate::lexer::tokens::Tokens;
 
-use super::atoms::{l_paren_tag, period_tag, r_paren_tag};
-use super::expression::parse_expressions;
+use super::atoms::{l_bracket_tag, l_paren_tag, period_tag, r_bracket_tag, r_paren_tag};
+use super::expression::{parse_expression, parse_expressions};
 use super::parse_identifier;
 use super::{
     ast::{Expression, Precedence},
@@ -45,8 +45,8 @@ fn parse_pratt_expression1(
                 parse_pratt_expression1(rest2, precedence, left2)
             }
             (Precedence::PIndex, _) if precedence < Precedence::PIndex => {
-                // parse index expression
-                todo!()
+                let (rest2, left2) = parse_pratt_index_expression(input, left)?;
+                parse_pratt_expression1(rest2, precedence, left2)
             }
             (peek_precedence, _) if precedence < peek_precedence => {
                 let (rest2, left2) = parse_infix_expression(input, left)?;
@@ -90,5 +90,12 @@ fn parse_pratt_call_expression(input: Tokens, left: Expression) -> IResult<Token
     map(
         delimited(l_paren_tag, opt(parse_expressions), r_paren_tag),
         |args| Expression::CallExpression(Box::new(left.clone()), args.unwrap_or_default()),
+    )(input)
+}
+
+fn parse_pratt_index_expression(input: Tokens, left: Expression) -> IResult<Tokens, Expression> {
+    map(
+        delimited(l_bracket_tag, parse_expression, r_bracket_tag),
+        |index_expr| Expression::IndexExpression(Box::new(left.clone()), Box::new(index_expr)),
     )(input)
 }
