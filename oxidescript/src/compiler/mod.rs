@@ -33,28 +33,41 @@ impl FromIterator<JavascriptCompilationOutput> for JavascriptCompilationOutput {
     }
 }
 
+struct JavascriptCompilerContext {
+    indent: usize,
+}
+
+impl JavascriptCompilerContext {
+    fn new() -> JavascriptCompilerContext {
+        JavascriptCompilerContext { indent: 0 }
+    }
+}
+
 trait JavascriptCompile {
-    fn compile(&self) -> JavascriptCompilationOutput;
+    fn compile(&self, ctx: &mut JavascriptCompilerContext) -> JavascriptCompilationOutput;
 }
 
 impl JavascriptCompile for Program {
-    fn compile(&self) -> JavascriptCompilationOutput {
-        self.iter().map(Statement::compile).collect()
+    fn compile(&self, ctx: &mut JavascriptCompilerContext) -> JavascriptCompilationOutput {
+        self.iter()
+            .map(|statement| statement.compile(ctx))
+            .collect()
     }
 }
 
 impl JavascriptCompile for Statement {
-    fn compile(&self) -> JavascriptCompilationOutput {
+    fn compile(&self, ctx: &mut JavascriptCompilerContext) -> JavascriptCompilationOutput {
         let statement = match self {
             Statement::ExpressionStatement {
                 expression: expr, ..
-            } => expr.compile(),
-            Statement::DeclarationStatement(decl) => decl.compile(),
+            } => expr.compile(ctx),
+            Statement::DeclarationStatement(decl) => decl.compile(ctx),
         };
-        let code = build_block(&statement, false);
+        let code = build_block(&statement, false, ctx);
         JavascriptCompilationOutput {
             code: format!(
-                "{}{}\n",
+                "{}{}{}\n",
+                indent(ctx.indent),
                 code,
                 if statement.semicolon_allowed { ";" } else { "" }
             ),
@@ -63,15 +76,31 @@ impl JavascriptCompile for Statement {
     }
 }
 
-fn build_block(block_output: &JavascriptCompilationOutput, eval: bool) -> String {
+fn build_block(
+    block_output: &JavascriptCompilationOutput,
+    eval: bool,
+    ctx: &JavascriptCompilerContext,
+) -> String {
     if block_output.is_block {
         if let Some(evaluates_to) = block_output.evaluates_to.as_ref() {
-            format!(
-                "let return_value = undefined;\n{{\n{}return_value = {};\n}}{}",
-                block_output.code,
-                evaluates_to,
-                eval.then_some(";\nreturn_value").unwrap_or_default()
-            )
+            let statements = vec![
+                "let return_value = undefined;".to_string(),
+                "{".to_string(),
+                format!(
+                    "{}{}return_value = {};",
+                    block_output.code.clone(),
+                    indent(ctx.indent + 1),
+                    evaluates_to
+                ),
+                "}".to_string(),
+                eval.then_some("return_value")
+                    .unwrap_or_default()
+                    .to_string(),
+            ]
+            .into_iter()
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>();
+            statements.join("\n")
         } else {
             block_output.code.clone()
         }
@@ -80,18 +109,22 @@ fn build_block(block_output: &JavascriptCompilationOutput, eval: bool) -> String
     }
 }
 
+fn indent(width: usize) -> String {
+    " ".repeat(width * 4)
+}
+
 impl JavascriptCompile for Expression {
-    fn compile(&self) -> JavascriptCompilationOutput {
+    fn compile(&self, ctx: &mut JavascriptCompilerContext) -> JavascriptCompilationOutput {
         match self {
             Expression::IdentifierExpression(ident) => JavascriptCompilationOutput {
                 code: ident.0.clone(),
                 semicolon_allowed: true,
                 ..Default::default()
             },
-            Expression::LiteralExpression(literal) => literal.compile(),
+            Expression::LiteralExpression(literal) => literal.compile(ctx),
             Expression::UnaryExpression(op, arg) => {
-                let op = op.compile();
-                let arg = arg.compile();
+                let op = op.compile(ctx);
+                let arg = arg.compile(ctx);
                 JavascriptCompilationOutput {
                     code: format!("{}{}", op.code, arg.code),
                     semicolon_allowed: arg.semicolon_allowed,
@@ -99,9 +132,9 @@ impl JavascriptCompile for Expression {
                 }
             }
             Expression::InfixExpression(op, arg0, arg1) => {
-                let op = op.compile();
-                let arg0 = arg0.compile();
-                let arg1 = arg1.compile();
+                let op = op.compile(ctx);
+                let arg0 = arg0.compile(ctx);
+                let arg1 = arg1.compile(ctx);
                 JavascriptCompilationOutput {
                     code: format!("{} {} {}", arg0.code, op.code, arg1.code),
                     semicolon_allowed: arg1.semicolon_allowed,
@@ -109,7 +142,7 @@ impl JavascriptCompile for Expression {
                 }
             }
             Expression::ArrayExpression(exprs) => {
-                let exprs = exprs.compile();
+                let exprs = exprs.compile(ctx);
                 JavascriptCompilationOutput {
                     code: format!("[{}]", exprs.code),
                     semicolon_allowed: true,
@@ -117,8 +150,8 @@ impl JavascriptCompile for Expression {
                 }
             }
             Expression::CallExpression(ident, args) => {
-                let ident = ident.compile();
-                let args = args.compile();
+                let ident = ident.compile(ctx);
+                let args = args.compile(ctx);
                 JavascriptCompilationOutput {
                     code: format!("{}({})", ident.code, args.code),
                     semicolon_allowed: true,
@@ -126,7 +159,7 @@ impl JavascriptCompile for Expression {
                 }
             }
             Expression::MemberAccessExpression(expr, ident) => {
-                let expr = expr.compile();
+                let expr = expr.compile(ctx);
                 let ident = ident.0.clone();
                 JavascriptCompilationOutput {
                     code: format!("{}.{}", expr.code, ident),
@@ -135,9 +168,9 @@ impl JavascriptCompile for Expression {
                 }
             }
             Expression::IndexExpression(expr, index_expr) => {
-                let expr = expr.compile();
-                let expr = build_block(&expr, true);
-                let index_expr = index_expr.compile();
+                let expr = expr.compile(ctx);
+                let expr = build_block(&expr, true, ctx);
+                let index_expr = index_expr.compile(ctx);
                 JavascriptCompilationOutput {
                     code: format!("{}[{}]", expr, index_expr.code),
                     semicolon_allowed: true,
@@ -145,7 +178,7 @@ impl JavascriptCompile for Expression {
                 }
             }
             Expression::BlockExpression(block) => {
-                let return_value = block.return_value.as_ref().map(Expression::compile);
+                let return_value = block.return_value.as_ref().map(|rv| rv.compile(ctx));
                 if block.statements.is_empty() {
                     return JavascriptCompilationOutput {
                         code: format!(
@@ -157,7 +190,9 @@ impl JavascriptCompile for Expression {
                         ..Default::default()
                     };
                 }
-                let block = block.statements.compile();
+                ctx.indent += 1;
+                let block = block.statements.compile(ctx);
+                ctx.indent -= 1;
                 JavascriptCompilationOutput {
                     code: block.code,
                     semicolon_allowed: false,
@@ -170,7 +205,7 @@ impl JavascriptCompile for Expression {
 }
 
 impl JavascriptCompile for Literal {
-    fn compile(&self) -> JavascriptCompilationOutput {
+    fn compile(&self, ctx: &mut JavascriptCompilerContext) -> JavascriptCompilationOutput {
         match self {
             Literal::NumberLiteral(n) => JavascriptCompilationOutput {
                 code: n.to_string(),
@@ -192,7 +227,7 @@ impl JavascriptCompile for Literal {
 }
 
 impl JavascriptCompile for UnaryOperator {
-    fn compile(&self) -> JavascriptCompilationOutput {
+    fn compile(&self, ctx: &mut JavascriptCompilerContext) -> JavascriptCompilationOutput {
         match self {
             UnaryOperator::Not => "!".into(),
             UnaryOperator::Minus => "-".into(),
@@ -202,7 +237,7 @@ impl JavascriptCompile for UnaryOperator {
 }
 
 impl JavascriptCompile for InfixOperator {
-    fn compile(&self) -> JavascriptCompilationOutput {
+    fn compile(&self, ctx: &mut JavascriptCompilerContext) -> JavascriptCompilationOutput {
         match self {
             InfixOperator::Equal => "==".into(),
             InfixOperator::NotEqual => "!=".into(),
@@ -220,10 +255,10 @@ impl JavascriptCompile for InfixOperator {
 }
 
 impl JavascriptCompile for Declaration {
-    fn compile(&self) -> JavascriptCompilationOutput {
+    fn compile(&self, ctx: &mut JavascriptCompilerContext) -> JavascriptCompilationOutput {
         match self {
             Declaration::ConstDeclaration(ident, expr) => {
-                let expr = expr.compile();
+                let expr = expr.compile(ctx);
                 let ident = ident.0.clone();
                 JavascriptCompilationOutput {
                     code: format!("const {} = {};", ident, expr.code),
@@ -231,7 +266,7 @@ impl JavascriptCompile for Declaration {
                 }
             }
             Declaration::LetDeclaration(ident, expr) => {
-                let expr = expr.compile();
+                let expr = expr.compile(ctx);
                 let ident = ident.0.clone();
                 JavascriptCompilationOutput {
                     code: format!("let {} = {};", ident, expr.code),
@@ -243,9 +278,9 @@ impl JavascriptCompile for Declaration {
                 parameters,
                 body,
             } => {
-                let parameters = parameters.compile();
+                let parameters = parameters.compile(ctx);
                 let name = name.0.clone();
-                let body = body.compile();
+                let body = body.compile(ctx);
                 JavascriptCompilationOutput {
                     code: format!("function {}({}) {}", name, parameters.code, body.code),
                     ..Default::default()
@@ -256,8 +291,8 @@ impl JavascriptCompile for Declaration {
 }
 
 impl JavascriptCompile for Vec<Parameter> {
-    fn compile(&self) -> JavascriptCompilationOutput {
-        let parameters = self.iter().map(Parameter::compile).collect::<Vec<_>>();
+    fn compile(&self, ctx: &mut JavascriptCompilerContext) -> JavascriptCompilationOutput {
+        let parameters = self.iter().map(|p| p.compile(ctx)).collect::<Vec<_>>();
         JavascriptCompilationOutput {
             code: parameters
                 .into_iter()
@@ -271,7 +306,7 @@ impl JavascriptCompile for Vec<Parameter> {
 }
 
 impl JavascriptCompile for Parameter {
-    fn compile(&self) -> JavascriptCompilationOutput {
+    fn compile(&self, ctx: &mut JavascriptCompilerContext) -> JavascriptCompilationOutput {
         JavascriptCompilationOutput {
             code: self.name.0.clone(),
             ..Default::default()
@@ -280,8 +315,8 @@ impl JavascriptCompile for Parameter {
 }
 
 impl JavascriptCompile for Vec<Expression> {
-    fn compile(&self) -> JavascriptCompilationOutput {
-        let expressions = self.iter().map(Expression::compile).collect::<Vec<_>>();
+    fn compile(&self, ctx: &mut JavascriptCompilerContext) -> JavascriptCompilationOutput {
+        let expressions = self.iter().map(|e| e.compile(ctx)).collect::<Vec<_>>();
         JavascriptCompilationOutput {
             code: expressions
                 .into_iter()
@@ -295,20 +330,27 @@ impl JavascriptCompile for Vec<Expression> {
 }
 
 impl JavascriptCompile for Block {
-    fn compile(&self) -> JavascriptCompilationOutput {
+    fn compile(&self, ctx: &mut JavascriptCompilerContext) -> JavascriptCompilationOutput {
         let statements = self
             .statements
             .iter()
-            .map(|statement| statement.compile())
+            .map(|statement| {
+                ctx.indent += 1;
+                let statement = statement.compile(ctx);
+                ctx.indent -= 1;
+                statement
+            })
             .collect::<JavascriptCompilationOutput>();
         let return_value = self
             .return_value
             .as_ref()
-            .map(|return_value| return_value.compile())
-            .map(|return_value| format!("return {};\n", return_value.code))
+            .map(|return_value| return_value.compile(ctx))
+            .map(|return_value| {
+                format!("{}return {};\n", indent(ctx.indent + 1), return_value.code)
+            })
             .unwrap_or("".into());
         JavascriptCompilationOutput {
-            code: format!("{{\n{}{}}}", statements.code, return_value,),
+            code: format!("{{\n{}{}}}", statements.code, return_value),
             ..Default::default()
         }
     }
@@ -318,7 +360,8 @@ pub struct JavascriptCompiler;
 
 impl JavascriptCompiler {
     pub fn compile(program: Program) -> String {
-        let compiled = program.compile();
+        let mut ctx = JavascriptCompilerContext::new();
+        let compiled = program.compile(&mut ctx);
         compiled.code
     }
 }
@@ -348,7 +391,11 @@ mod tests {
             },
         ];
 
-        assert_eq!("5;\n\"foo\";\ntrue;\n".to_string(), program.compile().code);
+        let mut ctx = JavascriptCompilerContext::new();
+        assert_eq!(
+            "5;\n\"foo\";\ntrue;\n".to_string(),
+            program.compile(&mut ctx).code
+        );
     }
 
     #[test]
@@ -391,9 +438,11 @@ mod tests {
                 has_semicolon: true,
             },
         ];
+
+        let mut ctx = JavascriptCompilerContext::new();
         assert_eq!(
             "test;\n5;\n-5;\n5 + 5;\n[5, 10];\n".to_string(),
-            program.compile().code
+            program.compile(&mut ctx).code
         );
     }
 
@@ -446,9 +495,11 @@ mod tests {
                 },
             }),
         ];
+
+        let mut ctx = JavascriptCompilerContext::new();
         assert_eq!(
-            "const test = 5;\nlet test = 5;\nfunction test() {\nlet test = 5;\n}\nfunction test(foo, bar) {\nlet baz = 5;\nreturn baz;\n}\n".to_string(),
-            program.compile().code
+            "const test = 5;\nlet test = 5;\nfunction test() {\n    let test = 5;\n}\nfunction test(foo, bar) {\n    let baz = 5;\n    return baz;\n}\n".to_string(),
+            program.compile(&mut ctx).code
         );
     }
 
@@ -497,9 +548,10 @@ mod tests {
         ];
         // TODO: add function call expression and more
 
+        let mut ctx = JavascriptCompilerContext::new();
         assert_eq!(
-            "function foo(bar, baz) {\nreturn bar + baz;\n}\nfoo(20, 30 - 2);\n".to_string(),
-            program.compile().code
+            "function foo(bar, baz) {\n    return bar + baz;\n}\nfoo(20, 30 - 2);\n".to_string(),
+            program.compile(&mut ctx).code
         );
     }
 
@@ -515,9 +567,10 @@ mod tests {
             has_semicolon: true,
         }];
 
+        let mut ctx = JavascriptCompilerContext::new();
         assert_eq!(
             "let return_value = 5;\n".to_string(),
-            program.compile().code
+            program.compile(&mut ctx).code
         );
     }
 
@@ -536,10 +589,11 @@ mod tests {
             has_semicolon: true,
         }];
 
+        let mut ctx = JavascriptCompilerContext::new();
         assert_eq!(
-            "let return_value = undefined;\n{\nconst foo = 5;\nreturn_value = foo;\n}\n"
+            "let return_value = undefined;\n{\n    const foo = 5;\n    return_value = foo;\n}\n"
                 .to_string(),
-            program.compile().code
+            program.compile(&mut ctx).code
         );
     }
 }
