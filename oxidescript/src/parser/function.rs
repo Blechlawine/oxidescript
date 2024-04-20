@@ -1,15 +1,16 @@
 use nom::{
+    branch::alt,
     combinator::{map, opt},
     multi::many0,
-    sequence::tuple,
+    sequence::{delimited, tuple},
     IResult,
 };
 
 use crate::lexer::tokens::Tokens;
 
 use super::{
-    ast::{Block, Parameter, Statement},
-    atoms::colon_tag,
+    ast::{Block, Expression, Parameter, Statement},
+    atoms::{colon_tag, return_tag, semicolon_tag},
     expression::parse_expression,
     parse_identifier,
     statement::parse_statement,
@@ -22,9 +23,19 @@ pub fn parse_parameter(input: Tokens) -> IResult<Tokens, Parameter> {
     )(input)
 }
 
+fn parse_return_expression(input: Tokens) -> IResult<Tokens, Expression> {
+    map(
+        delimited(return_tag, parse_expression, semicolon_tag),
+        |expr| expr,
+    )(input)
+}
+
 pub fn parse_block(input: Tokens) -> IResult<Tokens, Block> {
     map(
-        tuple((many0(parse_statement), opt(parse_expression))),
+        tuple((
+            many0(parse_statement),
+            opt(alt((parse_return_expression, parse_expression))),
+        )),
         |(mut statements, return_value)| {
             // Automatically select last expression statement as return value if no return value exists
             if return_value.is_none() {

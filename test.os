@@ -1,11 +1,15 @@
 let test = "Hello";
 fn main() {
-    println(test);
-    let test = "World";
-    println(test);
+    console.log(test);
+    let foo = "World";
+    console.log(foo);
+    return "Hello World";
 }
+main();
 
-{
-    let bar = 1;
-    bar
-}[0];
+console.log({
+    main()
+}, {
+    let foo = 2;
+    foo
+});
