@@ -301,7 +301,8 @@ impl JavascriptCompile for Literal {
 impl JavascriptCompile for UnaryOperator {
     fn compile(&self, _ctx: &mut JavascriptCompilerContext) -> JavascriptCompilationOutput {
         match self {
-            UnaryOperator::Not => "!".into(),
+            UnaryOperator::LogicalNot => "!".into(),
+            UnaryOperator::BitwiseNot => "~".into(),
             UnaryOperator::Minus => "-".into(),
             UnaryOperator::Plus => "+".into(),
         }
@@ -322,6 +323,13 @@ impl JavascriptCompile for InfixOperator {
             InfixOperator::Multiply => "*".into(),
             InfixOperator::Divide => "/".into(),
             InfixOperator::Modulo => "%".into(),
+            InfixOperator::LogicalOr => "||".into(),
+            InfixOperator::LogicalAnd => "&&".into(),
+            InfixOperator::BitwiseOr => "|".into(),
+            InfixOperator::BitwiseXor => "^".into(),
+            InfixOperator::BitwiseAnd => "&".into(),
+            InfixOperator::BitwiseLeftShift => "<<".into(),
+            InfixOperator::BitwiseRightShift => ">>".into(),
         }
     }
 }
@@ -646,7 +654,7 @@ mod tests {
 
         let mut ctx = JavascriptCompilerContext::new();
         assert_eq!(
-            "let return_value = 5;\n".to_string(),
+            "let return_value0 = 5;\n".to_string(),
             program.compile(&mut ctx).code
         );
     }

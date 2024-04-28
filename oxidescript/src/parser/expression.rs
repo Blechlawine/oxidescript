@@ -49,7 +49,7 @@ fn parse_identifier_expression(input: Tokens) -> IResult<Tokens, Expression> {
 }
 
 fn parse_unary_expression(input: Tokens) -> IResult<Tokens, Expression> {
-    let (rest1, unary) = alt((plus_tag, minus_tag, not_tag))(input)?;
+    let (rest1, unary) = alt((plus_tag, minus_tag, logical_not_tag, bitwise_not_tag))(input)?;
     if unary.tokens.is_empty() {
         Err(Err::Error(error_position!(input, ErrorKind::Tag)))
     } else {
@@ -63,9 +63,13 @@ fn parse_unary_expression(input: Tokens) -> IResult<Tokens, Expression> {
                 rest2,
                 Expression::UnaryExpression(UnaryOperator::Minus, Box::new(expression)),
             )),
-            Token::Not => Ok((
+            Token::LogicalNot => Ok((
                 rest2,
-                Expression::UnaryExpression(UnaryOperator::Not, Box::new(expression)),
+                Expression::UnaryExpression(UnaryOperator::LogicalNot, Box::new(expression)),
+            )),
+            Token::BitwiseNot => Ok((
+                rest2,
+                Expression::UnaryExpression(UnaryOperator::BitwiseNot, Box::new(expression)),
             )),
             _ => Err(Err::Error(error_position!(input, ErrorKind::Tag))),
         }

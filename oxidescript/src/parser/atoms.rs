@@ -32,7 +32,18 @@ tag_token!(minus_tag, Token::Minus);
 tag_token!(multiply_tag, Token::Multiply);
 tag_token!(divide_tag, Token::Divide);
 tag_token!(modulo_tag, Token::Modulo);
-tag_token!(not_tag, Token::Not);
+
+tag_token!(logical_not_tag, Token::LogicalNot);
+tag_token!(logical_and_tag, Token::LogicalAnd);
+tag_token!(logical_or_tag, Token::LogicalOr);
+
+tag_token!(bitwise_not_tag, Token::BitwiseNot);
+tag_token!(bitwise_and_tag, Token::BitwiseAnd);
+tag_token!(bitwise_or_tag, Token::BitwiseOr);
+tag_token!(bitwise_xor_tag, Token::BitwiseXor);
+tag_token!(bitwise_left_shift_tag, Token::BitwiseLeftShift);
+tag_token!(bitwise_right_shift_tag, Token::BitwiseRightShift);
+
 tag_token!(equal_tag, Token::Equal);
 tag_token!(not_equal_tag, Token::NotEqual);
 tag_token!(greater_than_tag, Token::GreaterThan);
@@ -70,6 +81,19 @@ pub fn infix_operator(token: &Token) -> (Precedence, Option<InfixOperator>) {
         Token::Multiply => (Precedence::PProduct, Some(InfixOperator::Multiply)),
         Token::Divide => (Precedence::PProduct, Some(InfixOperator::Divide)),
         Token::Modulo => (Precedence::PProduct, Some(InfixOperator::Modulo)),
+        Token::LogicalAnd => (Precedence::PLogicalAnd, Some(InfixOperator::LogicalAnd)),
+        Token::LogicalOr => (Precedence::PLogicalOr, Some(InfixOperator::LogicalOr)),
+        Token::BitwiseAnd => (Precedence::PBitwiseAnd, Some(InfixOperator::BitwiseAnd)),
+        Token::BitwiseOr => (Precedence::PBitwiseOr, Some(InfixOperator::BitwiseOr)),
+        Token::BitwiseXor => (Precedence::PBitwiseXor, Some(InfixOperator::BitwiseXor)),
+        Token::BitwiseLeftShift => (
+            Precedence::PBitwiseShift,
+            Some(InfixOperator::BitwiseLeftShift),
+        ),
+        Token::BitwiseRightShift => (
+            Precedence::PBitwiseShift,
+            Some(InfixOperator::BitwiseRightShift),
+        ),
         Token::LParen => (Precedence::PCall, None),
         Token::Period => (Precedence::PMemberAccess, None),
         Token::LBracket => (Precedence::PIndex, None),

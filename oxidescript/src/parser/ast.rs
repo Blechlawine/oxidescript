@@ -65,7 +65,8 @@ pub enum Literal {
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum UnaryOperator {
-    Not,
+    LogicalNot,
+    BitwiseNot,
     Minus,
     Plus,
 }
@@ -83,6 +84,13 @@ pub enum InfixOperator {
     Multiply,
     Divide,
     Modulo,
+    LogicalOr,
+    LogicalAnd,
+    BitwiseOr,
+    BitwiseXor,
+    BitwiseAnd,
+    BitwiseLeftShift,
+    BitwiseRightShift,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -91,11 +99,17 @@ pub struct Identifier(pub String);
 #[derive(Clone, Eq, PartialEq, Debug, PartialOrd)]
 pub enum Precedence {
     PLowest,
-    PEquals,
-    PLessGreater,
-    PSum,
-    PProduct,
-    PCall,
-    PMemberAccess,
-    PIndex,
+    PLogicalOr,    // ||
+    PLogicalAnd,   // &&
+    PBitwiseOr,    // |
+    PBitwiseXor,   // ^
+    PBitwiseAnd,   // &
+    PEquals,       // ==, !=
+    PLessGreater,  // >, <, >=, <=
+    PBitwiseShift, // <<, >>
+    PSum,          // +, -
+    PProduct,      // *, /, %
+    PCall,         // function call e.g. foo()
+    PMemberAccess, // e.g. foo.bar
+    PIndex,        // e.g. foo[0]
 }

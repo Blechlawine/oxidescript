@@ -31,6 +31,15 @@ syntax!(equal_operator, "==", Token::Equal);
 syntax!(not_equal_operator, "!=", Token::NotEqual);
 syntax!(greater_than_operator, ">", Token::GreaterThan);
 syntax!(less_than_operator, "<", Token::LessThan);
+syntax!(logical_not_operator, "!", Token::LogicalNot);
+syntax!(logical_and_operator, "&&", Token::LogicalAnd);
+syntax!(logical_or_operator, "||", Token::LogicalOr);
+syntax!(bitwise_not_operator, "~", Token::BitwiseNot);
+syntax!(bitwise_and_operator, "&", Token::BitwiseAnd);
+syntax!(bitwise_or_operator, "|", Token::BitwiseOr);
+syntax!(bitwise_xor_operator, "^", Token::BitwiseXor);
+syntax!(bitwise_left_shift_operator, "<<", Token::BitwiseLeftShift);
+syntax!(bitwise_right_shift_operator, ">>", Token::BitwiseRightShift);
 syntax!(greater_than_equal_operator, ">=", Token::GreaterThanEqual);
 syntax!(less_than_equal_operator, "<=", Token::LessThanEqual);
 syntax!(plus_operator, "+", Token::Plus);
@@ -45,6 +54,15 @@ pub fn lex_operator(input: &[u8]) -> IResult<&[u8], Token> {
         equal_operator,
         not_equal_operator,
         assign_operator,
+        logical_not_operator,
+        logical_and_operator,
+        logical_or_operator,
+        bitwise_not_operator,
+        bitwise_and_operator,
+        bitwise_or_operator,
+        bitwise_xor_operator,
+        bitwise_left_shift_operator,
+        bitwise_right_shift_operator,
         greater_than_operator,
         less_than_operator,
         greater_than_equal_operator,
@@ -86,21 +104,25 @@ pub fn lex_punctuation(input: &[u8]) -> IResult<&[u8], Token> {
 
 // Strings
 // TODO: understand
-fn pis(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
+fn parse_inside_string(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
     let (rest1, found1) = take(1usize)(input)?;
     match found1.as_bytes() {
         b"\"" => Ok((input, vec![])),
         b"\\" => {
             // We found an \ escape character
             let (rest2, found2) = take(1usize)(rest1)?;
-            pis(rest2).map(|(slice, done)| (slice, concat_slice_vec(found2, done)))
+            parse_inside_string(rest2).map(|(slice, done)| (slice, concat_slice_vec(found2, done)))
         }
-        c => pis(rest1).map(|(slice, done)| (slice, concat_slice_vec(c, done))),
+        c => parse_inside_string(rest1).map(|(slice, done)| (slice, concat_slice_vec(c, done))),
     }
 }
 
 fn string(input: &[u8]) -> IResult<&[u8], String> {
-    delimited(tag("\""), map_res(pis, convert_vec_utf8), tag("\""))(input)
+    delimited(
+        tag("\""),
+        map_res(parse_inside_string, convert_vec_utf8),
+        tag("\""),
+    )(input)
 }
 
 fn lex_string(input: &[u8]) -> IResult<&[u8], Token> {
@@ -210,7 +232,7 @@ mod tests {
 
     #[test]
     fn operators_punctuation() {
-        let input = b"=+/*%-()[]{},;:.";
+        let input = b"=+/*%-()[]{},;:.<>!<<>>|&^||&&~";
         let (rest, tokens) = Lexer::lex_tokens(input).unwrap();
         assert_eq!(rest, b"");
         assert_eq!(
@@ -232,6 +254,17 @@ mod tests {
                 Token::SemiColon,
                 Token::Colon,
                 Token::Period,
+                Token::LessThan,
+                Token::GreaterThan,
+                Token::LogicalNot,
+                Token::BitwiseLeftShift,
+                Token::BitwiseRightShift,
+                Token::BitwiseOr,
+                Token::BitwiseAnd,
+                Token::BitwiseXor,
+                Token::LogicalOr,
+                Token::LogicalAnd,
+                Token::BitwiseNot,
                 Token::EOF,
             ]
         )
