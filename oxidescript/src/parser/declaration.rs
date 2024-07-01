@@ -12,7 +12,7 @@ use super::{
     ast::Declaration,
     atoms::*,
     expression::parse_expression,
-    function::{parse_block, parse_parameter},
+    function::{parse_block, parse_parameter, parse_parameters},
     parse_identifier,
 };
 
@@ -60,7 +60,7 @@ fn parse_function_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
             function_tag,
             parse_identifier,
             l_paren_tag,
-            many0(parse_parameter),
+            parse_parameters,
             r_paren_tag,
             l_squirly_tag,
             parse_block,

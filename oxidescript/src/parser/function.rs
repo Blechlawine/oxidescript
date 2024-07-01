@@ -11,10 +11,30 @@ use crate::lexer::tokens::Tokens;
 use super::{
     ast::{Block, Expression, Parameter, Statement},
     atoms::{colon_tag, return_tag, semicolon_tag},
+    comma_tag,
     expression::parse_expression,
     parse_identifier,
     statement::parse_statement,
 };
+
+pub fn parse_parameters(input: Tokens) -> IResult<Tokens, Vec<Parameter>> {
+    map(
+        tuple((
+            opt(parse_parameter),
+            many0(tuple((comma_tag, parse_parameter))),
+        )),
+        |(first, rest)| {
+            let mut params = vec![];
+            if let Some(first) = first {
+                params.push(first);
+            }
+            params
+                .into_iter()
+                .chain(rest.into_iter().map(|(_, param)| param))
+                .collect()
+        },
+    )(input)
+}
 
 pub fn parse_parameter(input: Tokens) -> IResult<Tokens, Parameter> {
     map(
