@@ -453,232 +453,100 @@ impl JavascriptCompiler {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::ast::{Identifier, Program};
+    use crate::{
+        lexer::{tokens::Tokens, Lexer},
+        parser::Parser,
+    };
 
     use super::*;
 
+    fn assert_input_with_javascript(input: &[u8], expected_results: &'static str) {
+        let (_, r) = Lexer::lex_tokens(input).unwrap();
+        let tokens = Tokens::new(&r);
+        let (_, result) = Parser::parse(tokens).unwrap();
+        let mut ctx = JavascriptCompilerContext::new();
+        let compiled = result.compile(&mut ctx);
+        assert_eq!(expected_results, compiled.code);
+    }
+
     #[test]
     fn literals() {
-        let program: Program = vec![
-            Statement::ExpressionStatement {
-                expression: Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
-                has_semicolon: true,
-            },
-            Statement::ExpressionStatement {
-                expression: Expression::LiteralExpression(Literal::StringLiteral(
-                    "foo".to_string(),
-                )),
-                has_semicolon: true,
-            },
-            Statement::ExpressionStatement {
-                expression: Expression::LiteralExpression(Literal::BooleanLiteral(true)),
-                has_semicolon: true,
-            },
-        ];
-
-        let mut ctx = JavascriptCompilerContext::new();
-        assert_eq!(
-            "5;\n\"foo\";\ntrue;\n".to_string(),
-            program.compile(&mut ctx).code
-        );
+        let input = r#"
+        5;
+        "foo";
+        true;"#;
+        assert_input_with_javascript(input.as_bytes(), "5;\n\"foo\";\ntrue;\n");
     }
 
     #[test]
     fn expressions() {
-        let program: Program = vec![
-            Statement::ExpressionStatement {
-                expression: Expression::IdentifierExpression(Identifier("test".to_string())),
-                has_semicolon: true,
-            },
-            Statement::ExpressionStatement {
-                expression: Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
-                has_semicolon: true,
-            },
-            Statement::ExpressionStatement {
-                expression: Expression::UnaryExpression(
-                    UnaryOperator::Minus,
-                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                        "5".to_string(),
-                    ))),
-                ),
-                has_semicolon: true,
-            },
-            Statement::ExpressionStatement {
-                expression: Expression::InfixExpression(
-                    InfixOperator::Plus,
-                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                        "5".to_string(),
-                    ))),
-                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                        "5".to_string(),
-                    ))),
-                ),
-                has_semicolon: true,
-            },
-            Statement::ExpressionStatement {
-                expression: Expression::ArrayExpression(vec![
-                    Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
-                    Expression::LiteralExpression(Literal::NumberLiteral("10".to_string())),
-                ]),
-                has_semicolon: true,
-            },
-        ];
-
-        let mut ctx = JavascriptCompilerContext::new();
-        assert_eq!(
-            "test;\n5;\n-5;\n5 + 5;\n[5, 10];\n".to_string(),
-            program.compile(&mut ctx).code
-        );
+        let input = r#"
+        test;
+        5;
+        -5;
+        5 + 5;
+        [5, 10];
+        "#;
+        assert_input_with_javascript(input.as_bytes(), "test;\n5;\n-5;\n5 + 5;\n[5, 10];\n");
     }
 
     #[test]
     fn declarations() {
-        let program: Program = vec![
-            Statement::DeclarationStatement(Declaration::ConstDeclaration(
-                Identifier("test".to_string()),
-                Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
-            )),
-            Statement::DeclarationStatement(Declaration::LetDeclaration(
-                Identifier("test".to_string()),
-                Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
-            )),
-            Statement::DeclarationStatement(Declaration::FunctionDeclaration {
-                name: Identifier("test".to_string()),
-                parameters: vec![],
-                body: Block {
-                    statements: vec![Statement::DeclarationStatement(
-                        Declaration::LetDeclaration(
-                            Identifier("test".to_string()),
-                            Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
-                        ),
-                    )],
-                    return_value: None,
-                },
-            }),
-            Statement::DeclarationStatement(Declaration::FunctionDeclaration {
-                name: Identifier("test".to_string()),
-                parameters: vec![
-                    Parameter {
-                        name: Identifier("foo".to_string()),
-                        type_: Identifier("string".to_string()),
-                    },
-                    Parameter {
-                        name: Identifier("bar".to_string()),
-                        type_: Identifier("number".to_string()),
-                    },
-                ],
-                body: Block {
-                    statements: vec![Statement::DeclarationStatement(
-                        Declaration::LetDeclaration(
-                            Identifier("baz".to_string()),
-                            Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
-                        ),
-                    )],
-                    return_value: Some(Expression::IdentifierExpression(Identifier(
-                        "baz".to_string(),
-                    ))),
-                },
-            }),
-        ];
-
-        let mut ctx = JavascriptCompilerContext::new();
-        assert_eq!(
-            "const test = 5;\nlet test = 5;\nfunction test() {\n    let test = 5;\n}\nfunction test(foo, bar) {\n    let baz = 5;\n    return baz;\n}\n".to_string(),
-            program.compile(&mut ctx).code
+        let input = r#"
+        const test = 5;
+        let test = 5;
+        fn test() {
+            let test = 5;
+        }
+        fn test(foo: string, bar: number) {
+            let baz = 5;
+            baz
+        }
+        "#;
+        assert_input_with_javascript(
+            input.as_bytes(),
+            "const test = 5;\nlet test = 5;\nfunction test() {\n    let test = 5;\n}\nfunction test(foo, bar) {\n    let baz = 5;\n    return baz;\n}\n",
         );
     }
 
     #[test]
     fn code_snippet() {
-        let program: Program = vec![
-            Statement::DeclarationStatement(Declaration::FunctionDeclaration {
-                name: Identifier("foo".into()),
-                parameters: vec![
-                    Parameter {
-                        name: Identifier("bar".into()),
-                        type_: Identifier("number".into()),
-                    },
-                    Parameter {
-                        name: Identifier("baz".into()),
-                        type_: Identifier("number".into()),
-                    },
-                ],
-                body: Block {
-                    statements: vec![],
-                    return_value: Some(Expression::InfixExpression(
-                        InfixOperator::Plus,
-                        Box::new(Expression::IdentifierExpression(Identifier("bar".into()))),
-                        Box::new(Expression::IdentifierExpression(Identifier("baz".into()))),
-                    )),
-                },
-            }),
-            Statement::ExpressionStatement {
-                expression: Expression::CallExpression(
-                    Box::new(Expression::IdentifierExpression(Identifier("foo".into()))),
-                    vec![
-                        Expression::LiteralExpression(Literal::NumberLiteral("20".into())),
-                        Expression::InfixExpression(
-                            InfixOperator::Minus,
-                            Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                                "30".into(),
-                            ))),
-                            Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                                "2".into(),
-                            ))),
-                        ),
-                    ],
-                ),
-                has_semicolon: true,
-            },
-        ];
+        let input = r#"
+        fn foo(bar: number, baz: number) {
+            bar + baz
+        }
+        foo(20, 30 - 2);
+        "#;
         // TODO: add function call expression and more
 
-        let mut ctx = JavascriptCompilerContext::new();
-        assert_eq!(
-            "function foo(bar, baz) {\n    return bar + baz;\n}\nfoo(20, 30 - 2);\n".to_string(),
-            program.compile(&mut ctx).code
+        assert_input_with_javascript(
+            input.as_bytes(),
+            "function foo(bar, baz) {\n    return bar + baz;\n}\nfoo(20, 30 - 2);\n",
         );
     }
 
     #[test]
     fn block_expression_without_statements() {
-        let program: Program = vec![Statement::ExpressionStatement {
-            expression: Expression::BlockExpression(Box::new(Block {
-                statements: vec![],
-                return_value: Some(Expression::LiteralExpression(Literal::NumberLiteral(
-                    "5".into(),
-                ))),
-            })),
-            has_semicolon: true,
-        }];
-
-        let mut ctx = JavascriptCompilerContext::new();
-        assert_eq!(
-            "let return_value0 = 5;\n".to_string(),
-            program.compile(&mut ctx).code
-        );
+        // TODO: this should be just removed from the output, since it doesn't do anything
+        let input = r#"
+        {
+            5
+        };
+        "#;
+        assert_input_with_javascript(input.as_bytes(), "let return_value0 = 5;\n");
     }
 
     #[test]
     fn block_expression_with_statements() {
-        let program: Program = vec![Statement::ExpressionStatement {
-            expression: Expression::BlockExpression(Box::new(Block {
-                statements: vec![Statement::DeclarationStatement(
-                    Declaration::ConstDeclaration(
-                        Identifier("foo".into()),
-                        Expression::LiteralExpression(Literal::NumberLiteral("5".into())),
-                    ),
-                )],
-                return_value: Some(Expression::IdentifierExpression(Identifier("foo".into()))),
-            })),
-            has_semicolon: true,
-        }];
-
-        let mut ctx = JavascriptCompilerContext::new();
-        assert_eq!(
-            "let return_value = undefined;\n{\n    const foo = 5;\n    return_value = foo;\n}\n"
-                .to_string(),
-            program.compile(&mut ctx).code
+        let input = r#"
+        {
+            const foo = 5;
+            foo
+        };
+        "#;
+        assert_input_with_javascript(
+            input.as_bytes(),
+            "let return_value = undefined;\n{\n    const foo = 5;\n    return_value = foo;\n}\n",
         );
     }
 }
