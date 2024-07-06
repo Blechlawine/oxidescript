@@ -41,6 +41,7 @@ impl FromIterator<JavascriptCompilationOutput> for JavascriptCompilationOutput {
 #[allow(dead_code)]
 enum ExpressionTarget {
     FunctionArgument,
+    FunctionBody,
     Index,
     #[default]
     Statement,
@@ -442,7 +443,9 @@ impl JavascriptCompile for Declaration {
             } => {
                 let parameters = parameters.compile(ctx);
                 let name = name.0.clone();
-                let body = body.compile(ctx);
+                let body = ctx.run_with(None, Some(ExpressionTarget::FunctionBody), |c| {
+                    body.compile(c)
+                });
                 JavascriptCompilationOutput {
                     code: format!("function {}({}) {}", name, parameters.code, body.code),
                     ..Default::default()
@@ -510,11 +513,26 @@ impl JavascriptCompile for Block {
             .return_value
             .as_ref()
             .map(|return_value| return_value.compile(ctx))
-            .map(|return_value| {
-                format!("{}return {};\n", indent(ctx.indent + 1), return_value.code)
+            .map(|return_value| match ctx.expression_target.last() {
+                Some(
+                    ExpressionTarget::IfThenBlock
+                    | ExpressionTarget::ElseIfBlock
+                    | ExpressionTarget::ElseBlock,
+                ) => {
+                    format!(
+                        "{}return_value = {};\n",
+                        indent(ctx.indent + 1),
+                        return_value.code
+                    )
+                }
+                Some(ExpressionTarget::FunctionBody) => {
+                    format!("{}return {};\n", indent(ctx.indent + 1), return_value.code)
+                }
+                _ => todo!(),
             })
             .unwrap_or("".into());
         JavascriptCompilationOutput {
+            prepend_to_statement: vec![format!("let return_value;")],
             code: format!("{{\n{}{}}}", statements.code, return_value),
             ..Default::default()
         }

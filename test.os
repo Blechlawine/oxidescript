@@ -1,15 +1,7 @@
-let test = "Hello";
-fn main() {
-    console.log(test);
-    let foo = "World";
-    console.log(foo);
-    return "Hello World";
+fn fibonacci_recursive(n: number) {
+    if n < 2 {
+        n
+    } else {
+        fibonacci_recursive(n - 1) + fibonacci_recursive(n - 2)
+    }
 }
-main();
-
-console.log({
-    main()
-}, {
-    let foo = 2;
-    foo
-});
