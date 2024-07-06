@@ -25,6 +25,8 @@ tag_token!(let_tag, Token::Let);
 tag_token!(const_tag, Token::Const);
 tag_token!(function_tag, Token::Function);
 tag_token!(return_tag, Token::Return);
+tag_token!(if_tag, Token::If);
+tag_token!(else_tag, Token::Else);
 
 tag_token!(assign_tag, Token::Assign);
 tag_token!(plus_tag, Token::Plus);

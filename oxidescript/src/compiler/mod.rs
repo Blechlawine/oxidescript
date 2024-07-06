@@ -45,6 +45,10 @@ enum ExpressionTarget {
     #[default]
     Statement,
     Expression,
+    IfCondition,
+    IfThenBlock,
+    ElseIfBlock,
+    ElseBlock,
 }
 
 #[derive(Debug)]
@@ -61,6 +65,29 @@ impl JavascriptCompilerContext {
             expression_target: vec![ExpressionTarget::Statement],
             block_return_value_counter: 0,
         }
+    }
+
+    pub fn run_with(
+        &mut self,
+        indent: Option<usize>,
+        expression_target: Option<ExpressionTarget>,
+        to_compile: impl Fn(&mut JavascriptCompilerContext) -> JavascriptCompilationOutput,
+    ) -> JavascriptCompilationOutput {
+        let with_target = expression_target.is_some();
+        if let Some(indent) = indent {
+            self.indent += indent;
+        }
+        if let Some(expression_target) = expression_target {
+            self.expression_target.push(expression_target);
+        }
+        let result = to_compile(self);
+        if let Some(indent) = indent {
+            self.indent -= indent;
+        }
+        if with_target {
+            self.expression_target.pop();
+        }
+        result
     }
 }
 
@@ -213,9 +240,14 @@ impl JavascriptCompile for Expression {
                 let return_value_name = format!("return_value{}", ctx.block_return_value_counter);
                 ctx.block_return_value_counter += 1;
                 if block.statements.is_empty() {
+                    // directly output the return value, because the block things are unnecessary
                     if matches!(
                         ctx.expression_target.last(),
-                        Some(ExpressionTarget::Index | ExpressionTarget::FunctionArgument)
+                        Some(
+                            ExpressionTarget::Index
+                                | ExpressionTarget::FunctionArgument
+                                | ExpressionTarget::IfCondition
+                        )
                     ) {
                         return JavascriptCompilationOutput {
                             code: return_value.map(|rv| rv.code).unwrap_or_default(),
@@ -237,7 +269,11 @@ impl JavascriptCompile for Expression {
                 ctx.indent -= 1;
                 if matches!(
                     ctx.expression_target.last(),
-                    Some(ExpressionTarget::Index | ExpressionTarget::FunctionArgument)
+                    Some(
+                        ExpressionTarget::Index
+                            | ExpressionTarget::FunctionArgument
+                            | ExpressionTarget::IfCondition
+                    )
                 ) {
                     let prepend_code = vec![
                         format!("let {return_value_name} = undefined;"),
@@ -270,6 +306,50 @@ impl JavascriptCompile for Expression {
                         evaluates_to: return_value.map(|rv| rv.code),
                         ..Default::default()
                     }
+                }
+            }
+            Expression::IfExpression {
+                condition,
+                then_block,
+                else_if_blocks,
+                else_block,
+            } => {
+                // TODO: handle complex usages of if expressions, like when used as a value
+                // somewhere
+                let condition = ctx.run_with(None, Some(ExpressionTarget::IfCondition), |c| {
+                    condition.compile(c)
+                });
+                let then_block = ctx.run_with(None, Some(ExpressionTarget::IfThenBlock), |c| {
+                    then_block.compile(c)
+                });
+                let else_if_blocks = ctx.run_with(None, Some(ExpressionTarget::ElseIfBlock), |c| {
+                    else_if_blocks
+                        .iter()
+                        .map(|(condition, block)| {
+                            let condition = condition.compile(c);
+                            let block = block.compile(c);
+                            JavascriptCompilationOutput {
+                                code: format!(" else if ({}) {}", condition.code, block.code),
+                                ..Default::default()
+                            }
+                        })
+                        .collect()
+                });
+                let else_block = else_block.as_ref().map(|e| {
+                    ctx.run_with(None, Some(ExpressionTarget::ElseBlock), |c| e.compile(c))
+                });
+                let mut code = format!(
+                    "if ({}) {}{}",
+                    condition.code, then_block.code, else_if_blocks.code
+                );
+                if let Some(else_block) = else_block {
+                    code.push_str(format!(" else {}", else_block.code).as_str())
+                }
+                JavascriptCompilationOutput {
+                    code,
+                    prepend_to_statement: condition.prepend_to_statement,
+                    semicolon_allowed: false,
+                    ..Default::default()
                 }
             }
         }
@@ -466,7 +546,7 @@ mod tests {
         let (_, result) = Parser::parse(tokens).unwrap();
         let mut ctx = JavascriptCompilerContext::new();
         let compiled = result.compile(&mut ctx);
-        assert_eq!(expected_results, compiled.code);
+        assert_eq!(compiled.code, expected_results);
     }
 
     #[test]
@@ -548,5 +628,22 @@ mod tests {
             input.as_bytes(),
             "let return_value = undefined;\n{\n    const foo = 5;\n    return_value = foo;\n}\n",
         );
+    }
+
+    #[test]
+    fn if_statement() {
+        let input = r#"
+        if true {
+            false;
+        } else if false {
+            "Helo";
+        } else {
+            true;
+        }
+        "#;
+        assert_input_with_javascript(
+            input.as_bytes(),
+            "if (true) {\n    false;\n} else if (false) {\n    \"Helo\";\n} else {\n    true;\n}\n",
+        )
     }
 }

@@ -1,8 +1,11 @@
+use core::panic;
+
 use crate::lexer::token::Token;
 use crate::lexer::tokens::Tokens;
+use nom::combinator::opt;
 use nom::error::ErrorKind;
 use nom::multi::many0;
-use nom::sequence::{delimited, pair, preceded};
+use nom::sequence::{delimited, pair, preceded, tuple};
 use nom::Err;
 use nom::{branch::alt, combinator::map, error_position, IResult};
 
@@ -33,6 +36,7 @@ pub fn parse_atom_expression(input: Tokens) -> IResult<Tokens, Expression> {
         parse_paren_expression,
         parse_array_expression,
         parse_block_expression,
+        parse_if_expression,
     ))(input)
 }
 
@@ -95,6 +99,51 @@ fn parse_block_expression(input: Tokens) -> IResult<Tokens, Expression> {
     map(
         delimited(l_squirly_tag, parse_block, r_squirly_tag),
         |block| Expression::BlockExpression(Box::new(block)),
+    )(input)
+}
+
+fn parse_if_expression(input: Tokens) -> IResult<Tokens, Expression> {
+    map(
+        tuple((
+            if_tag,
+            parse_expression,
+            parse_block_expression,
+            many0(tuple((
+                else_tag,
+                if_tag,
+                parse_expression,
+                parse_block_expression,
+            ))),
+            opt(tuple((else_tag, parse_block_expression))),
+        )),
+        |(_if, condition, then_block_expr, else_ifs, else_)| {
+            if let Expression::BlockExpression(then_block) = then_block_expr {
+                Expression::IfExpression {
+                    condition: Box::new(condition),
+                    then_block: Box::new(*then_block),
+                    else_if_blocks: else_ifs
+                        .into_iter()
+                        .map(|(_else, _if, condition, block_expr)| {
+                            if let Expression::BlockExpression(block) = block_expr {
+                                (condition, *block)
+                            } else {
+                                panic!("parse_block_expression parsed something other than a block expression");
+                            }
+                        })
+                        .collect(),
+                    else_block: else_
+                        .map(|(_, block_expr)| {
+                            if let Expression::BlockExpression(block) = block_expr {
+                                block
+                            } else {
+                                panic!("parse_block_expression parsed something other than a block expression");
+                            }
+                        }),
+                }
+            } else {
+                panic!("parse_block_expression parsed something other than a block expression");
+            }
+        },
     )(input)
 }
 

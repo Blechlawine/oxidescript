@@ -16,11 +16,12 @@ pub enum Expression {
     UnaryExpression(UnaryOperator, Box<Expression>),
     InfixExpression(InfixOperator, Box<Expression>, Box<Expression>),
     ArrayExpression(Vec<Expression>),
-    // IfExpression {
-    //     condition: Box<Expression>,
-    //     then_branch: Box<Expression>,
-    //     else_branch: Option<Box<Expression>>,
-    // },
+    IfExpression {
+        condition: Box<Expression>,
+        then_block: Box<Block>,
+        else_if_blocks: Vec<(Expression, Block)>,
+        else_block: Option<Box<Block>>,
+    },
     // ForExpression {
     //     // TODO
     // },

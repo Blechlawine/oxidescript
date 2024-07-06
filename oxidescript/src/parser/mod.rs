@@ -309,6 +309,50 @@ mod tests {
     }
 
     #[test]
+    fn if_expression() {
+        let input = r#"
+        if true {
+            1
+        } else if false {
+            2;
+        } else {
+            3
+        };
+        "#;
+        let program: Program = vec![Statement::ExpressionStatement {
+            expression: Expression::IfExpression {
+                condition: Box::new(Expression::LiteralExpression(Literal::BooleanLiteral(true))),
+                then_block: Box::new(Block {
+                    statements: vec![],
+                    return_value: Some(Expression::LiteralExpression(Literal::NumberLiteral(
+                        "1".into(),
+                    ))),
+                }),
+                else_if_blocks: vec![(
+                    Expression::LiteralExpression(Literal::BooleanLiteral(false)),
+                    Block {
+                        statements: vec![Statement::ExpressionStatement {
+                            expression: Expression::LiteralExpression(Literal::NumberLiteral(
+                                "2".into(),
+                            )),
+                            has_semicolon: true,
+                        }],
+                        return_value: None,
+                    },
+                )],
+                else_block: Some(Box::new(Block {
+                    statements: vec![],
+                    return_value: Some(Expression::LiteralExpression(Literal::NumberLiteral(
+                        "3".into(),
+                    ))),
+                })),
+            },
+            has_semicolon: true,
+        }];
+        assert_input_with_program(input.as_bytes(), program);
+    }
+
+    #[test]
     fn expression_statement_mix() {
         let input = r#"
             fn test() {
