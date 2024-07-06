@@ -1,7 +1,8 @@
 use std::{
     fs::read_to_string,
+    os::unix::process,
     path::{Path, PathBuf},
-    process::Command,
+    process::{exit, Command},
 };
 
 use clap::Parser as ClapParser;
@@ -29,7 +30,7 @@ enum OxideCommand {
     /// Compile files
     Compile {
         #[arg(short, long)]
-        outdir: PathBuf,
+        outdir: Option<PathBuf>,
     },
     Run {
         #[arg(short, long)]
@@ -80,10 +81,32 @@ fn main() {
 
     match args.command {
         OxideCommand::Compile { outdir } => {
-            if outdir.exists() {
-                std::fs::remove_dir_all(&outdir).unwrap();
-            }
-            std::fs::create_dir_all(&outdir).unwrap();
+            let outdir = if let Some(outdir) = outdir {
+                if outdir.is_dir() {
+                    if let Ok(read_dir) = outdir.read_dir() {
+                        if read_dir.count() > 0 {
+                            println!(
+                                "Outdir {} is not empty. Cancelling",
+                                outdir.to_string_lossy()
+                            );
+                            exit(1);
+                        }
+                    }
+                    if outdir.exists() {
+                        std::fs::remove_dir_all(&outdir).unwrap();
+                    }
+                    std::fs::create_dir_all(&outdir).unwrap();
+                    outdir
+                } else {
+                    println!(
+                        "Outdir {} is not a directory. Cancelling",
+                        outdir.to_string_lossy()
+                    );
+                    exit(1);
+                }
+            } else {
+                PathBuf::from(".")
+            };
 
             let compiled = compile_file(&args.input, &ctx);
             let new_file_name = format!("{}.js", args.input.file_stem().unwrap().to_str().unwrap());
