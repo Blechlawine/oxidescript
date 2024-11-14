@@ -15,7 +15,7 @@ use nom::{sequence::terminated, IResult};
 use crate::lexer::token::Token;
 use crate::lexer::tokens::Tokens;
 
-use self::ast::{Identifier, Literal, Program};
+use self::ast::{Identifier, Literal, Number, NumberBase, Program};
 use self::atoms::*;
 use self::statement::parse_statement;
 
@@ -25,7 +25,35 @@ fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
         Err(Err::Error(Error::new(input, ErrorKind::Tag)))
     } else {
         match found.tokens[0].clone() {
-            Token::NumberLiteral(val) => Ok((rest, Literal::NumberLiteral(val))),
+            Token::NumberLiteral(val) => {
+                let parsed: Number = if val.starts_with("0x") {
+                    Number::I {
+                        base: NumberBase::Hex,
+                        value: i32::from_str_radix(&val, 16).unwrap(),
+                    }
+                } else if val.starts_with("0b") {
+                    Number::I {
+                        base: NumberBase::Bin,
+                        value: i32::from_str_radix(&val, 2).unwrap(),
+                    }
+                } else if val.starts_with("0o") {
+                    Number::I {
+                        base: NumberBase::Oct,
+                        value: i32::from_str_radix(&val, 8).unwrap(),
+                    }
+                } else {
+                    let int = val.parse::<i32>();
+                    if let Ok(int) = int {
+                        Number::I {
+                            base: NumberBase::Dec,
+                            value: int,
+                        }
+                    } else {
+                        Number::F(val.parse().unwrap())
+                    }
+                };
+                Ok((rest, Literal::NumberLiteral(parsed)))
+            }
             Token::StringLiteral(val) => Ok((rest, Literal::StringLiteral(val))),
             Token::BooleanLiteral(val) => Ok((rest, Literal::BooleanLiteral(val))),
             _ => Err(Err::Error(Error::new(input, ErrorKind::Tag))),
@@ -88,7 +116,10 @@ mod tests {
         let program: Program = vec![Statement::DeclarationStatement(
             Declaration::LetDeclaration(
                 Identifier("test".to_string()),
-                Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
+                Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
+                    base: NumberBase::Dec,
+                    value: 5,
+                })),
             ),
         )];
         assert_input_with_program(input, program);
@@ -107,11 +138,17 @@ mod tests {
         let program: Program = vec![
             Statement::DeclarationStatement(Declaration::LetDeclaration(
                 Identifier("test".to_string()),
-                Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
+                Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
+                    base: NumberBase::Dec,
+                    value: 5,
+                })),
             )),
             Statement::DeclarationStatement(Declaration::ConstDeclaration(
                 Identifier("stuff".to_string()),
-                Expression::LiteralExpression(Literal::NumberLiteral("12".to_string())),
+                Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
+                    base: NumberBase::Dec,
+                    value: 12,
+                })),
             )),
             Statement::DeclarationStatement(Declaration::LetDeclaration(
                 Identifier("things".to_string()),
@@ -143,7 +180,10 @@ mod tests {
                     statements: vec![Statement::DeclarationStatement(
                         Declaration::LetDeclaration(
                             Identifier("variable".to_string()),
-                            Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
+                            Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
+                                base: NumberBase::Dec,
+                                value: 5,
+                            })),
                         ),
                     )],
                     return_value: None,
@@ -164,15 +204,24 @@ mod tests {
                 Expression::InfixExpression(
                     InfixOperator::Minus,
                     Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                        "5".into(),
+                        Number::I {
+                            base: NumberBase::Dec,
+                            value: 5,
+                        },
                     ))),
                     Box::new(Expression::InfixExpression(
                         InfixOperator::Multiply,
                         Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                            "10".into(),
+                            Number::I {
+                                base: NumberBase::Dec,
+                                value: 10,
+                            },
                         ))),
                         Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                            "2".into(),
+                            Number::I {
+                                base: NumberBase::Dec,
+                                value: 2,
+                            },
                         ))),
                     )),
                 ),
@@ -199,10 +248,16 @@ mod tests {
                     return_value: Some(Expression::InfixExpression(
                         InfixOperator::Minus,
                         Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                            "5".into(),
+                            Number::I {
+                                base: NumberBase::Dec,
+                                value: 5,
+                            },
                         ))),
                         Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                            "10".into(),
+                            Number::I {
+                                base: NumberBase::Dec,
+                                value: 10,
+                            },
                         ))),
                     )),
                 },
@@ -226,7 +281,10 @@ mod tests {
                         "array".to_string(),
                     ))),
                     Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                        "1".to_string(),
+                        Number::I {
+                            base: NumberBase::Dec,
+                            value: 1,
+                        },
                     ))),
                 ),
                 has_semicolon: true,
@@ -239,10 +297,16 @@ mod tests {
                     Box::new(Expression::InfixExpression(
                         InfixOperator::Plus,
                         Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                            "1".to_string(),
+                            Number::I {
+                                base: NumberBase::Dec,
+                                value: 1,
+                            },
                         ))),
                         Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                            "2".to_string(),
+                            Number::I {
+                                base: NumberBase::Dec,
+                                value: 2,
+                            },
                         ))),
                     )),
                 ),
@@ -263,14 +327,23 @@ mod tests {
                     "foo".to_string(),
                 ))),
                 vec![
-                    Expression::LiteralExpression(Literal::NumberLiteral("20".to_string())),
+                    Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
+                        base: NumberBase::Dec,
+                        value: 20,
+                    })),
                     Expression::InfixExpression(
                         InfixOperator::Minus,
                         Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                            "30".to_string(),
+                            Number::I {
+                                base: NumberBase::Dec,
+                                value: 30,
+                            },
                         ))),
                         Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                            "2".to_string(),
+                            Number::I {
+                                base: NumberBase::Dec,
+                                value: 2,
+                            },
                         ))),
                     ),
                 ],
@@ -295,10 +368,16 @@ mod tests {
                 return_value: Some(Expression::InfixExpression(
                     InfixOperator::Minus,
                     Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                        "5".to_string(),
+                        Number::I {
+                            base: NumberBase::Dec,
+                            value: 5,
+                        },
                     ))),
                     Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                        "10".to_string(),
+                        Number::I {
+                            base: NumberBase::Dec,
+                            value: 10,
+                        },
                     ))),
                 )),
             })),
@@ -325,7 +404,10 @@ mod tests {
                 then_block: Box::new(Block {
                     statements: vec![],
                     return_value: Some(Expression::LiteralExpression(Literal::NumberLiteral(
-                        "1".into(),
+                        Number::I {
+                            base: NumberBase::Dec,
+                            value: 1,
+                        },
                     ))),
                 }),
                 else_if_blocks: vec![(
@@ -333,7 +415,10 @@ mod tests {
                     Block {
                         statements: vec![Statement::ExpressionStatement {
                             expression: Expression::LiteralExpression(Literal::NumberLiteral(
-                                "2".into(),
+                                Number::I {
+                                    base: NumberBase::Dec,
+                                    value: 2,
+                                },
                             )),
                             has_semicolon: true,
                         }],
@@ -343,7 +428,10 @@ mod tests {
                 else_block: Some(Box::new(Block {
                     statements: vec![],
                     return_value: Some(Expression::LiteralExpression(Literal::NumberLiteral(
-                        "3".into(),
+                        Number::I {
+                            base: NumberBase::Dec,
+                            value: 3,
+                        },
                     ))),
                 })),
             },
@@ -377,15 +465,24 @@ mod tests {
                                 Box::new(Expression::InfixExpression(
                                     InfixOperator::Minus,
                                     Box::new(Expression::LiteralExpression(
-                                        Literal::NumberLiteral("5".into()),
+                                        Literal::NumberLiteral(Number::I {
+                                            base: NumberBase::Dec,
+                                            value: 5,
+                                        }),
                                     )),
                                     Box::new(Expression::InfixExpression(
                                         InfixOperator::Multiply,
                                         Box::new(Expression::LiteralExpression(
-                                            Literal::NumberLiteral("10".into()),
+                                            Literal::NumberLiteral(Number::I {
+                                                base: NumberBase::Dec,
+                                                value: 10,
+                                            }),
                                         )),
                                         Box::new(Expression::LiteralExpression(
-                                            Literal::NumberLiteral("2".into()),
+                                            Literal::NumberLiteral(Number::I {
+                                                base: NumberBase::Dec,
+                                                value: 2,
+                                            }),
                                         )),
                                     )),
                                 )),
@@ -395,15 +492,24 @@ mod tests {
                                     ))),
                                     vec![
                                         Expression::LiteralExpression(Literal::NumberLiteral(
-                                            "20".to_string(),
+                                            Number::I {
+                                                base: NumberBase::Dec,
+                                                value: 20,
+                                            },
                                         )),
                                         Expression::InfixExpression(
                                             InfixOperator::Minus,
                                             Box::new(Expression::LiteralExpression(
-                                                Literal::NumberLiteral("30".to_string()),
+                                                Literal::NumberLiteral(Number::I {
+                                                    base: NumberBase::Dec,
+                                                    value: 30,
+                                                }),
                                             )),
                                             Box::new(Expression::LiteralExpression(
-                                                Literal::NumberLiteral("2".to_string()),
+                                                Literal::NumberLiteral(Number::I {
+                                                    base: NumberBase::Dec,
+                                                    value: 2,
+                                                }),
                                             )),
                                         ),
                                     ],
@@ -413,7 +519,10 @@ mod tests {
                         },
                         Statement::DeclarationStatement(Declaration::LetDeclaration(
                             Identifier("variable".to_string()),
-                            Expression::LiteralExpression(Literal::NumberLiteral("5".to_string())),
+                            Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
+                                base: NumberBase::Dec,
+                                value: 5,
+                            })),
                         )),
                     ],
                     return_value: Some(Expression::IdentifierExpression(Identifier(
@@ -450,7 +559,10 @@ mod tests {
                         "array".to_string(),
                     ))),
                     Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
-                        "1".to_string(),
+                        Number::I {
+                            base: NumberBase::Dec,
+                            value: 1,
+                        },
                     ))),
                 ),
                 has_semicolon: true,

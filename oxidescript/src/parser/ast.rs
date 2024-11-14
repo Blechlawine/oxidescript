@@ -1,3 +1,10 @@
+use std::{
+    fmt::{Display, Write},
+    num::ParseFloatError,
+};
+
+use nom::error::ParseError;
+
 pub type Program = Vec<Statement>;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -60,8 +67,45 @@ pub struct Parameter {
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Literal {
     StringLiteral(String),
-    NumberLiteral(String),
+    NumberLiteral(Number),
     BooleanLiteral(bool),
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum Number {
+    F(String),
+    I { base: NumberBase, value: i32 },
+}
+impl Display for Number {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Number::F(s) => f.write_str(s),
+            Number::I { base, value } => match base {
+                NumberBase::Bin => f.write_str(&format!("{:#b}", value)),
+                NumberBase::Hex => f.write_str(&format!("{:#x}", value)),
+                NumberBase::Oct => f.write_str(&format!("{:#o}", value)),
+                NumberBase::Dec => value.fmt(f),
+            },
+        }
+    }
+}
+impl TryFrom<Number> for f64 {
+    type Error = ParseFloatError;
+
+    fn try_from(value: Number) -> Result<Self, Self::Error> {
+        match value {
+            Number::F(s) => s.parse(),
+            Number::I { value, .. } => Ok(value as f64),
+        }
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum NumberBase {
+    Bin,
+    Hex,
+    Oct,
+    Dec,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]

@@ -3,6 +3,11 @@ use crate::parser::ast::{
     UnaryOperator,
 };
 
+pub trait Compiler {
+    fn new() -> Self;
+    fn compile(&self, program: Program) -> String;
+}
+
 #[derive(Default, Debug)]
 struct JavascriptCompilationOutput {
     code: String,

@@ -1,0 +1,9 @@
+[package]
+name = "oxidescript-javascript-compiler"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+oxc_codegen = "0.17.1"
+oxc = "0.17.1"
+oxidescript = { path = "../oxidescript" }
