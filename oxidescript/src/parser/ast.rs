@@ -1,9 +1,4 @@
-use std::{
-    fmt::{Display, Write},
-    num::ParseFloatError,
-};
-
-use nom::error::ParseError;
+use std::{fmt::Display, num::ParseFloatError};
 
 pub type Program = Vec<Statement>;
 
