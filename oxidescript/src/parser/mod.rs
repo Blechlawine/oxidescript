@@ -89,6 +89,8 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
+    use ast::{ElseIfExpr, IfExpr, InfixExpr};
+
     use super::{
         ast::{Block, Declaration, Expression, InfixOperator, Statement},
         *,
@@ -201,30 +203,30 @@ mod tests {
         let program: Program = vec![Statement::DeclarationStatement(
             Declaration::LetDeclaration(
                 Identifier("foo".to_string()),
-                Expression::InfixExpression(
-                    InfixOperator::Minus,
-                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                Expression::InfixExpression(InfixExpr {
+                    op: InfixOperator::Minus,
+                    lhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                         Number::I {
                             base: NumberBase::Dec,
                             value: 5,
                         },
                     ))),
-                    Box::new(Expression::InfixExpression(
-                        InfixOperator::Multiply,
-                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                    rhs: Box::new(Expression::InfixExpression(InfixExpr {
+                        op: InfixOperator::Multiply,
+                        lhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                             Number::I {
                                 base: NumberBase::Dec,
                                 value: 10,
                             },
                         ))),
-                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                        rhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                             Number::I {
                                 base: NumberBase::Dec,
                                 value: 2,
                             },
                         ))),
-                    )),
-                ),
+                    })),
+                }),
             ),
         )];
 
@@ -245,21 +247,21 @@ mod tests {
                 parameters: vec![],
                 body: Block {
                     statements: vec![],
-                    return_value: Some(Expression::InfixExpression(
-                        InfixOperator::Minus,
-                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                    return_value: Some(Expression::InfixExpression(InfixExpr {
+                        op: InfixOperator::Minus,
+                        lhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                             Number::I {
                                 base: NumberBase::Dec,
                                 value: 5,
                             },
                         ))),
-                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                        rhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                             Number::I {
                                 base: NumberBase::Dec,
                                 value: 10,
                             },
                         ))),
-                    )),
+                    })),
                 },
             },
         )];
@@ -294,21 +296,21 @@ mod tests {
                     Box::new(Expression::IdentifierExpression(Identifier(
                         "array".to_string(),
                     ))),
-                    Box::new(Expression::InfixExpression(
-                        InfixOperator::Plus,
-                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                    Box::new(Expression::InfixExpression(InfixExpr {
+                        op: InfixOperator::Plus,
+                        lhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                             Number::I {
                                 base: NumberBase::Dec,
                                 value: 1,
                             },
                         ))),
-                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                        rhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                             Number::I {
                                 base: NumberBase::Dec,
                                 value: 2,
                             },
                         ))),
-                    )),
+                    })),
                 ),
                 has_semicolon: true,
             },
@@ -331,21 +333,21 @@ mod tests {
                         base: NumberBase::Dec,
                         value: 20,
                     })),
-                    Expression::InfixExpression(
-                        InfixOperator::Minus,
-                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                    Expression::InfixExpression(InfixExpr {
+                        op: InfixOperator::Minus,
+                        lhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                             Number::I {
                                 base: NumberBase::Dec,
                                 value: 30,
                             },
                         ))),
-                        Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                        rhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                             Number::I {
                                 base: NumberBase::Dec,
                                 value: 2,
                             },
                         ))),
-                    ),
+                    }),
                 ],
             ),
             has_semicolon: true,
@@ -365,21 +367,21 @@ mod tests {
         let program: Program = vec![Statement::ExpressionStatement {
             expression: Expression::BlockExpression(Box::new(Block {
                 statements: vec![],
-                return_value: Some(Expression::InfixExpression(
-                    InfixOperator::Minus,
-                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                return_value: Some(Expression::InfixExpression(InfixExpr {
+                    op: InfixOperator::Minus,
+                    lhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                         Number::I {
                             base: NumberBase::Dec,
                             value: 5,
                         },
                     ))),
-                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                    rhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                         Number::I {
                             base: NumberBase::Dec,
                             value: 10,
                         },
                     ))),
-                )),
+                })),
             })),
             has_semicolon: false,
         }];
@@ -399,7 +401,7 @@ mod tests {
         };
         "#;
         let program: Program = vec![Statement::ExpressionStatement {
-            expression: Expression::IfExpression {
+            expression: Expression::IfExpression(IfExpr {
                 condition: Box::new(Expression::LiteralExpression(Literal::BooleanLiteral(true))),
                 then_block: Box::new(Block {
                     statements: vec![],
@@ -410,9 +412,11 @@ mod tests {
                         },
                     ))),
                 }),
-                else_if_blocks: vec![(
-                    Expression::LiteralExpression(Literal::BooleanLiteral(false)),
-                    Block {
+                else_if_blocks: vec![ElseIfExpr {
+                    condition: Box::new(Expression::LiteralExpression(Literal::BooleanLiteral(
+                        false,
+                    ))),
+                    then_block: Block {
                         statements: vec![Statement::ExpressionStatement {
                             expression: Expression::LiteralExpression(Literal::NumberLiteral(
                                 Number::I {
@@ -424,7 +428,7 @@ mod tests {
                         }],
                         return_value: None,
                     },
-                )],
+                }],
                 else_block: Some(Box::new(Block {
                     statements: vec![],
                     return_value: Some(Expression::LiteralExpression(Literal::NumberLiteral(
@@ -434,7 +438,7 @@ mod tests {
                         },
                     ))),
                 })),
-            },
+            }),
             has_semicolon: true,
         }];
         assert_input_with_program(input.as_bytes(), program);
@@ -460,33 +464,33 @@ mod tests {
                 body: Block {
                     statements: vec![
                         Statement::ExpressionStatement {
-                            expression: Expression::InfixExpression(
-                                InfixOperator::Plus,
-                                Box::new(Expression::InfixExpression(
-                                    InfixOperator::Minus,
-                                    Box::new(Expression::LiteralExpression(
+                            expression: Expression::InfixExpression(InfixExpr {
+                                op: InfixOperator::Plus,
+                                lhs: Box::new(Expression::InfixExpression(InfixExpr {
+                                    op: InfixOperator::Minus,
+                                    lhs: Box::new(Expression::LiteralExpression(
                                         Literal::NumberLiteral(Number::I {
                                             base: NumberBase::Dec,
                                             value: 5,
                                         }),
                                     )),
-                                    Box::new(Expression::InfixExpression(
-                                        InfixOperator::Multiply,
-                                        Box::new(Expression::LiteralExpression(
+                                    rhs: Box::new(Expression::InfixExpression(InfixExpr {
+                                        op: InfixOperator::Multiply,
+                                        lhs: Box::new(Expression::LiteralExpression(
                                             Literal::NumberLiteral(Number::I {
                                                 base: NumberBase::Dec,
                                                 value: 10,
                                             }),
                                         )),
-                                        Box::new(Expression::LiteralExpression(
+                                        rhs: Box::new(Expression::LiteralExpression(
                                             Literal::NumberLiteral(Number::I {
                                                 base: NumberBase::Dec,
                                                 value: 2,
                                             }),
                                         )),
-                                    )),
-                                )),
-                                Box::new(Expression::CallExpression(
+                                    })),
+                                })),
+                                rhs: Box::new(Expression::CallExpression(
                                     Box::new(Expression::IdentifierExpression(Identifier(
                                         "foo".to_string(),
                                     ))),
@@ -497,24 +501,24 @@ mod tests {
                                                 value: 20,
                                             },
                                         )),
-                                        Expression::InfixExpression(
-                                            InfixOperator::Minus,
-                                            Box::new(Expression::LiteralExpression(
+                                        Expression::InfixExpression(InfixExpr {
+                                            op: InfixOperator::Minus,
+                                            lhs: Box::new(Expression::LiteralExpression(
                                                 Literal::NumberLiteral(Number::I {
                                                     base: NumberBase::Dec,
                                                     value: 30,
                                                 }),
                                             )),
-                                            Box::new(Expression::LiteralExpression(
+                                            rhs: Box::new(Expression::LiteralExpression(
                                                 Literal::NumberLiteral(Number::I {
                                                     base: NumberBase::Dec,
                                                     value: 2,
                                                 }),
                                             )),
-                                        ),
+                                        }),
                                     ],
                                 )),
-                            ),
+                            }),
                             has_semicolon: true,
                         },
                         Statement::DeclarationStatement(Declaration::LetDeclaration(

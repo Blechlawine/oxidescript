@@ -33,8 +33,8 @@ impl<'ctx> JavascriptCompilerContext<'ctx> {
     }
 }
 
-trait JavascriptCompile<const MINIFY: bool> {
-    fn compile<'ctx>(&'ctx self, ctx: &'ctx JavascriptCompilerContext<'ctx>) -> impl Gen<MINIFY>;
+trait JavascriptCompile {
+    fn compile<'ctx>(&'ctx self, ctx: &'ctx JavascriptCompilerContext<'ctx>) -> impl Gen;
 }
 
 trait IntoOxc<'c, T> {

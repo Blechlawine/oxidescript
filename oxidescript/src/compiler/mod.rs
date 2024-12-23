@@ -1,6 +1,6 @@
 use crate::parser::ast::{
-    Block, Declaration, Expression, InfixOperator, Literal, Parameter, Program, Statement,
-    UnaryOperator,
+    Block, Declaration, ElseIfExpr, Expression, IfExpr, InfixExpr, InfixOperator, Literal,
+    Parameter, Program, Statement, UnaryOperator,
 };
 
 pub trait Compiler {
@@ -178,19 +178,19 @@ impl JavascriptCompile for Expression {
                 ..Default::default()
             },
             Expression::LiteralExpression(literal) => literal.compile(ctx),
-            Expression::UnaryExpression(op, arg) => {
-                let op = op.compile(ctx);
-                let arg = arg.compile(ctx);
+            Expression::UnaryExpression(expr) => {
+                let op = expr.op.compile(ctx);
+                let arg = expr.rhs.compile(ctx);
                 JavascriptCompilationOutput {
                     code: format!("{}{}", op.code, arg.code),
                     semicolon_allowed: arg.semicolon_allowed,
                     ..Default::default()
                 }
             }
-            Expression::InfixExpression(op, arg0, arg1) => {
+            Expression::InfixExpression(InfixExpr { op, lhs, rhs }) => {
                 let op = op.compile(ctx);
-                let arg0 = arg0.compile(ctx);
-                let arg1 = arg1.compile(ctx);
+                let arg0 = lhs.compile(ctx);
+                let arg1 = rhs.compile(ctx);
                 JavascriptCompilationOutput {
                     code: format!("{} {} {}", arg0.code, op.code, arg1.code),
                     semicolon_allowed: arg1.semicolon_allowed,
@@ -314,12 +314,12 @@ impl JavascriptCompile for Expression {
                     }
                 }
             }
-            Expression::IfExpression {
+            Expression::IfExpression(IfExpr {
                 condition,
                 then_block,
                 else_if_blocks,
                 else_block,
-            } => {
+            }) => {
                 // TODO: handle complex usages of if expressions, like when used as a value
                 // somewhere
                 let condition = ctx.run_with(None, Some(ExpressionTarget::IfCondition), |c| {
@@ -331,14 +331,19 @@ impl JavascriptCompile for Expression {
                 let else_if_blocks = ctx.run_with(None, Some(ExpressionTarget::ElseIfBlock), |c| {
                     else_if_blocks
                         .iter()
-                        .map(|(condition, block)| {
-                            let condition = condition.compile(c);
-                            let block = block.compile(c);
-                            JavascriptCompilationOutput {
-                                code: format!(" else if ({}) {}", condition.code, block.code),
-                                ..Default::default()
-                            }
-                        })
+                        .map(
+                            |ElseIfExpr {
+                                 condition,
+                                 then_block: block,
+                             }| {
+                                let condition = condition.compile(c);
+                                let block = block.compile(c);
+                                JavascriptCompilationOutput {
+                                    code: format!(" else if ({}) {}", condition.code, block.code),
+                                    ..Default::default()
+                                }
+                            },
+                        )
                         .collect()
                 });
                 let else_block = else_block.as_ref().map(|e| {

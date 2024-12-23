@@ -9,7 +9,7 @@ use nom::sequence::{delimited, pair, preceded, tuple};
 use nom::Err;
 use nom::{branch::alt, combinator::map, error_position, IResult};
 
-use super::ast::{Precedence, UnaryOperator};
+use super::ast::{ElseIfExpr, IfExpr, Precedence, UnaryExpr, UnaryOperator};
 use super::function::parse_block;
 use super::pratt_expression::parse_pratt_expression;
 use super::{ast::Expression, atoms::*, parse_identifier, parse_literal};
@@ -61,19 +61,31 @@ fn parse_unary_expression(input: Tokens) -> IResult<Tokens, Expression> {
         match unary.tokens[0] {
             Token::Plus => Ok((
                 rest2,
-                Expression::UnaryExpression(UnaryOperator::Plus, Box::new(expression)),
+                Expression::UnaryExpression(UnaryExpr {
+                    op: UnaryOperator::Plus,
+                    rhs: Box::new(expression),
+                }),
             )),
             Token::Minus => Ok((
                 rest2,
-                Expression::UnaryExpression(UnaryOperator::Minus, Box::new(expression)),
+                Expression::UnaryExpression(UnaryExpr {
+                    op: UnaryOperator::Minus,
+                    rhs: Box::new(expression),
+                }),
             )),
             Token::LogicalNot => Ok((
                 rest2,
-                Expression::UnaryExpression(UnaryOperator::LogicalNot, Box::new(expression)),
+                Expression::UnaryExpression(UnaryExpr {
+                    op: UnaryOperator::LogicalNot,
+                    rhs: Box::new(expression),
+                }),
             )),
             Token::BitwiseNot => Ok((
                 rest2,
-                Expression::UnaryExpression(UnaryOperator::BitwiseNot, Box::new(expression)),
+                Expression::UnaryExpression(UnaryExpr {
+                    op: UnaryOperator::BitwiseNot,
+                    rhs: Box::new(expression),
+                }),
             )),
             _ => Err(Err::Error(error_position!(input, ErrorKind::Tag))),
         }
@@ -118,14 +130,17 @@ fn parse_if_expression(input: Tokens) -> IResult<Tokens, Expression> {
         )),
         |(_if, condition, then_block_expr, else_ifs, else_)| {
             if let Expression::BlockExpression(then_block) = then_block_expr {
-                Expression::IfExpression {
+                Expression::IfExpression(IfExpr {
                     condition: Box::new(condition),
                     then_block: Box::new(*then_block),
                     else_if_blocks: else_ifs
                         .into_iter()
                         .map(|(_else, _if, condition, block_expr)| {
                             if let Expression::BlockExpression(block) = block_expr {
-                                (condition, *block)
+                                ElseIfExpr {
+                                    condition: Box::new(condition),
+                                    then_block: *block
+                                }
                             } else {
                                 panic!("parse_block_expression parsed something other than a block expression");
                             }
@@ -139,7 +154,7 @@ fn parse_if_expression(input: Tokens) -> IResult<Tokens, Expression> {
                                 panic!("parse_block_expression parsed something other than a block expression");
                             }
                         }),
-                }
+                })
             } else {
                 panic!("parse_block_expression parsed something other than a block expression");
             }

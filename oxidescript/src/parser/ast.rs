@@ -15,15 +15,10 @@ pub enum Statement {
 pub enum Expression {
     IdentifierExpression(Identifier),
     LiteralExpression(Literal),
-    UnaryExpression(UnaryOperator, Box<Expression>),
-    InfixExpression(InfixOperator, Box<Expression>, Box<Expression>),
+    UnaryExpression(UnaryExpr),
+    InfixExpression(InfixExpr),
     ArrayExpression(Vec<Expression>),
-    IfExpression {
-        condition: Box<Expression>,
-        then_block: Box<Block>,
-        else_if_blocks: Vec<(Expression, Block)>,
-        else_block: Option<Box<Block>>,
-    },
+    IfExpression(IfExpr),
     // ForExpression {
     //     // TODO
     // },
@@ -37,6 +32,19 @@ pub enum Expression {
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
+pub struct UnaryExpr {
+    pub op: UnaryOperator,
+    pub rhs: Box<Expression>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct InfixExpr {
+    pub op: InfixOperator,
+    pub lhs: Box<Expression>,
+    pub rhs: Box<Expression>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Declaration {
     ConstDeclaration(Identifier, Expression),
     LetDeclaration(Identifier, Expression),
@@ -45,6 +53,20 @@ pub enum Declaration {
         parameters: Vec<Parameter>,
         body: Block,
     },
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct IfExpr {
+    pub condition: Box<Expression>,
+    pub then_block: Box<Block>,
+    pub else_if_blocks: Vec<ElseIfExpr>,
+    pub else_block: Option<Box<Block>>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct ElseIfExpr {
+    pub condition: Box<Expression>,
+    pub then_block: Block,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]

@@ -7,6 +7,7 @@ use nom::{bytes::complete::take, IResult};
 
 use crate::lexer::tokens::Tokens;
 
+use super::ast::InfixExpr;
 use super::atoms::{l_bracket_tag, l_paren_tag, period_tag, r_bracket_tag, r_paren_tag};
 use super::expression::{parse_expression, parse_expressions};
 use super::parse_identifier;
@@ -70,7 +71,11 @@ fn parse_infix_expression(input: Tokens, left: Expression) -> IResult<Tokens, Ex
                 let (rest2, right) = parse_pratt_expression(rest, precedence)?;
                 Ok((
                     rest2,
-                    Expression::InfixExpression(op, Box::new(left), Box::new(right)),
+                    Expression::InfixExpression(InfixExpr {
+                        op,
+                        lhs: Box::new(left),
+                        rhs: Box::new(right),
+                    }),
                 ))
             }
         }
