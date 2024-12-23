@@ -89,7 +89,7 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use ast::{ElseIfExpr, IfExpr, InfixExpr};
+    use ast::{CallExpr, ElseIfExpr, IfExpr, IndexExpr, InfixExpr, MemberAccessExpr};
 
     use super::{
         ast::{Block, Declaration, Expression, InfixOperator, Statement},
@@ -278,25 +278,25 @@ mod tests {
 
         let program: Program = vec![
             Statement::ExpressionStatement {
-                expression: Expression::IndexExpression(
-                    Box::new(Expression::IdentifierExpression(Identifier(
+                expression: Expression::IndexExpression(IndexExpr {
+                    lhs: Box::new(Expression::IdentifierExpression(Identifier(
                         "array".to_string(),
                     ))),
-                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                    index: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                         Number::I {
                             base: NumberBase::Dec,
                             value: 1,
                         },
                     ))),
-                ),
+                }),
                 has_semicolon: true,
             },
             Statement::ExpressionStatement {
-                expression: Expression::IndexExpression(
-                    Box::new(Expression::IdentifierExpression(Identifier(
+                expression: Expression::IndexExpression(IndexExpr {
+                    lhs: Box::new(Expression::IdentifierExpression(Identifier(
                         "array".to_string(),
                     ))),
-                    Box::new(Expression::InfixExpression(InfixExpr {
+                    index: Box::new(Expression::InfixExpression(InfixExpr {
                         op: InfixOperator::Plus,
                         lhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                             Number::I {
@@ -311,7 +311,7 @@ mod tests {
                             },
                         ))),
                     })),
-                ),
+                }),
                 has_semicolon: true,
             },
         ];
@@ -324,11 +324,11 @@ mod tests {
         let input = "foo(20, 30 - 2);".as_bytes();
 
         let program: Program = vec![Statement::ExpressionStatement {
-            expression: Expression::CallExpression(
-                Box::new(Expression::IdentifierExpression(Identifier(
+            expression: Expression::CallExpression(CallExpr {
+                lhs: Box::new(Expression::IdentifierExpression(Identifier(
                     "foo".to_string(),
                 ))),
-                vec![
+                arguments: vec![
                     Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
                         base: NumberBase::Dec,
                         value: 20,
@@ -349,7 +349,7 @@ mod tests {
                         ))),
                     }),
                 ],
-            ),
+            }),
             has_semicolon: true,
         }];
 
@@ -490,11 +490,11 @@ mod tests {
                                         )),
                                     })),
                                 })),
-                                rhs: Box::new(Expression::CallExpression(
-                                    Box::new(Expression::IdentifierExpression(Identifier(
+                                rhs: Box::new(Expression::CallExpression(CallExpr {
+                                    lhs: Box::new(Expression::IdentifierExpression(Identifier(
                                         "foo".to_string(),
                                     ))),
-                                    vec![
+                                    arguments: vec![
                                         Expression::LiteralExpression(Literal::NumberLiteral(
                                             Number::I {
                                                 base: NumberBase::Dec,
@@ -517,7 +517,7 @@ mod tests {
                                             )),
                                         }),
                                     ],
-                                )),
+                                })),
                             }),
                             has_semicolon: true,
                         },
@@ -535,40 +535,40 @@ mod tests {
                 },
             }),
             Statement::ExpressionStatement {
-                expression: Expression::CallExpression(
-                    Box::new(Expression::IdentifierExpression(Identifier(
+                expression: Expression::CallExpression(CallExpr {
+                    lhs: Box::new(Expression::IdentifierExpression(Identifier(
                         "test".to_string(),
                     ))),
-                    vec![],
-                ),
+                    arguments: vec![],
+                }),
                 has_semicolon: true,
             },
             Statement::ExpressionStatement {
-                expression: Expression::CallExpression(
-                    Box::new(Expression::MemberAccessExpression(
-                        Box::new(Expression::IdentifierExpression(Identifier(
+                expression: Expression::CallExpression(CallExpr {
+                    lhs: Box::new(Expression::MemberAccessExpression(MemberAccessExpr {
+                        lhs: Box::new(Expression::IdentifierExpression(Identifier(
                             "console".into(),
                         ))),
-                        Identifier("log".into()),
-                    )),
-                    vec![Expression::LiteralExpression(Literal::StringLiteral(
+                        ident: Identifier("log".into()),
+                    })),
+                    arguments: vec![Expression::LiteralExpression(Literal::StringLiteral(
                         "Hello world".into(),
                     ))],
-                ),
+                }),
                 has_semicolon: true,
             },
             Statement::ExpressionStatement {
-                expression: Expression::IndexExpression(
-                    Box::new(Expression::IdentifierExpression(Identifier(
+                expression: Expression::IndexExpression(IndexExpr {
+                    lhs: Box::new(Expression::IdentifierExpression(Identifier(
                         "array".to_string(),
                     ))),
-                    Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
+                    index: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                         Number::I {
                             base: NumberBase::Dec,
                             value: 1,
                         },
                     ))),
-                ),
+                }),
                 has_semicolon: true,
             },
         ];

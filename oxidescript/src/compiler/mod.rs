@@ -1,6 +1,6 @@
 use crate::parser::ast::{
-    Block, Declaration, ElseIfExpr, Expression, IfExpr, InfixExpr, InfixOperator, Literal,
-    Parameter, Program, Statement, UnaryOperator,
+    Block, CallExpr, Declaration, ElseIfExpr, Expression, IfExpr, IndexExpr, InfixExpr,
+    InfixOperator, Literal, MemberAccessExpr, Parameter, Program, Statement, UnaryOperator,
 };
 
 pub trait Compiler {
@@ -205,7 +205,10 @@ impl JavascriptCompile for Expression {
                     ..Default::default()
                 }
             }
-            Expression::CallExpression(ident, args) => {
+            Expression::CallExpression(CallExpr {
+                lhs: ident,
+                arguments: args,
+            }) => {
                 let ident = ident.compile(ctx);
                 ctx.expression_target
                     .push(ExpressionTarget::FunctionArgument);
@@ -218,7 +221,7 @@ impl JavascriptCompile for Expression {
                     ..Default::default()
                 }
             }
-            Expression::MemberAccessExpression(expr, ident) => {
+            Expression::MemberAccessExpression(MemberAccessExpr { lhs: expr, ident }) => {
                 let expr = expr.compile(ctx);
                 let ident = ident.0.clone();
                 JavascriptCompilationOutput {
@@ -228,11 +231,11 @@ impl JavascriptCompile for Expression {
                     ..Default::default()
                 }
             }
-            Expression::IndexExpression(expr, index_expr) => {
+            Expression::IndexExpression(IndexExpr { lhs: expr, index }) => {
                 let expr_compiled = expr.compile(ctx);
                 let expr = build_block(&expr_compiled, true, ctx);
                 ctx.expression_target.push(ExpressionTarget::Index);
-                let index_expr = index_expr.compile(ctx);
+                let index_expr = index.compile(ctx);
                 ctx.expression_target.pop();
                 JavascriptCompilationOutput {
                     code: format!("{}[{}]", expr, index_expr.code),

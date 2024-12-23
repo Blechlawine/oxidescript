@@ -26,9 +26,27 @@ pub enum Expression {
     //     // TODO
     // },
     BlockExpression(Box<Block>),
-    CallExpression(Box<Expression>, Vec<Expression>),
-    IndexExpression(Box<Expression>, Box<Expression>),
-    MemberAccessExpression(Box<Expression>, Identifier),
+    CallExpression(CallExpr),
+    IndexExpression(IndexExpr),
+    MemberAccessExpression(MemberAccessExpr),
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct MemberAccessExpr {
+    pub lhs: Box<Expression>,
+    pub ident: Identifier,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct IndexExpr {
+    pub lhs: Box<Expression>,
+    pub index: Box<Expression>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct CallExpr {
+    pub lhs: Box<Expression>,
+    pub arguments: Vec<Expression>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]

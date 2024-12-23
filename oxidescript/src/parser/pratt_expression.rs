@@ -7,7 +7,7 @@ use nom::{bytes::complete::take, IResult};
 
 use crate::lexer::tokens::Tokens;
 
-use super::ast::InfixExpr;
+use super::ast::{CallExpr, IndexExpr, InfixExpr, MemberAccessExpr};
 use super::atoms::{l_bracket_tag, l_paren_tag, period_tag, r_bracket_tag, r_paren_tag};
 use super::expression::{parse_expression, parse_expressions};
 use super::parse_identifier;
@@ -87,20 +87,33 @@ fn parse_pratt_member_access_expression(
     left: Expression,
 ) -> IResult<Tokens, Expression> {
     map(tuple((period_tag, parse_identifier)), |(_, right)| {
-        Expression::MemberAccessExpression(Box::new(left.clone()), right)
+        Expression::MemberAccessExpression(MemberAccessExpr {
+            lhs: Box::new(left.clone()),
+            ident: right,
+        })
     })(input)
 }
 
 fn parse_pratt_call_expression(input: Tokens, left: Expression) -> IResult<Tokens, Expression> {
     map(
         delimited(l_paren_tag, opt(parse_expressions), r_paren_tag),
-        |args| Expression::CallExpression(Box::new(left.clone()), args.unwrap_or_default()),
+        |args| {
+            Expression::CallExpression(CallExpr {
+                lhs: Box::new(left.clone()),
+                arguments: args.unwrap_or_default(),
+            })
+        },
     )(input)
 }
 
 fn parse_pratt_index_expression(input: Tokens, left: Expression) -> IResult<Tokens, Expression> {
     map(
         delimited(l_bracket_tag, parse_expression, r_bracket_tag),
-        |index_expr| Expression::IndexExpression(Box::new(left.clone()), Box::new(index_expr)),
+        |index_expr| {
+            Expression::IndexExpression(IndexExpr {
+                lhs: Box::new(left.clone()),
+                index: Box::new(index_expr),
+            })
+        },
     )(input)
 }
