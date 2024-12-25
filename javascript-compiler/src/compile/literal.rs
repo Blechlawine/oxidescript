@@ -1,8 +1,8 @@
 use oxc::{
     ast::{
         ast::{
-            ArrayExpressionElement, BooleanLiteral, Expression, NumberBase, NumericLiteral,
-            StringLiteral,
+            Argument, ArrayExpressionElement, BooleanLiteral, Expression, NumberBase,
+            NumericLiteral, StringLiteral,
         },
         AstBuilder,
     },
@@ -49,6 +49,22 @@ impl<'c> IntoOxc<'c, ArrayExpressionElement<'c>> for oxidescript::parser::ast::L
                     ctx.allocator,
                 ))
             }
+        }
+    }
+}
+
+impl<'c> IntoOxc<'c, Argument<'c>> for oxidescript::parser::ast::Literal {
+    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Argument<'c> {
+        match self {
+            oxidescript::parser::ast::Literal::StringLiteral(inner) => Argument::StringLiteral(
+                oxc::allocator::Box::new_in(inner.into_oxc(ctx), ctx.allocator),
+            ),
+            oxidescript::parser::ast::Literal::NumberLiteral(inner) => Argument::NumericLiteral(
+                oxc::allocator::Box::new_in(inner.into_oxc(ctx), ctx.allocator),
+            ),
+            oxidescript::parser::ast::Literal::BooleanLiteral(inner) => Argument::BooleanLiteral(
+                oxc::allocator::Box::new_in(inner.into_oxc(ctx), ctx.allocator),
+            ),
         }
     }
 }

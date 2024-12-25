@@ -1,15 +1,16 @@
 use oxc::{
     ast::{
         ast::{
-            ArrayExpressionElement, BindingRestElement, Expression, FunctionBody, Program,
-            Statement, TSTypeAnnotation, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
-            VariableDeclarator,
+            Argument, ArrayExpressionElement, BindingRestElement, Expression, FunctionBody,
+            Program, Statement, TSTypeAnnotation, TSTypeParameterDeclaration,
+            TSTypeParameterInstantiation, VariableDeclarator,
         },
         AstBuilder,
     },
     span::{SourceType, Span},
 };
 
+pub mod conditional;
 pub mod function;
 pub mod ident;
 pub mod infix;
@@ -37,6 +38,7 @@ impl<'c> IntoOxc<'c, Program<'c>> for oxidescript::parser::ast::Program {
 
 impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Statement {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Statement {
+        println!("compiling statement to statement");
         match self {
             oxidescript::parser::ast::Statement::ExpressionStatement { expression, .. } => {
                 AstBuilder::new(ctx.allocator)
@@ -123,6 +125,7 @@ impl<'c> IntoOxc<'c, oxc::allocator::Box<'c, FunctionBody<'c>>>
         self,
         ctx: &'c JavascriptCompilerContext<'c>,
     ) -> oxc::allocator::Box<'c, FunctionBody<'c>> {
+        println!("compiling block to function body");
         oxc::allocator::Box::new_in(
             AstBuilder::new(ctx.allocator).function_body(
                 Span::new(0, 0),
@@ -139,17 +142,26 @@ impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, Statement<'c>>> for oxidescript::pa
         self,
         ctx: &'c JavascriptCompilerContext<'c>,
     ) -> oxc::allocator::Vec<'c, Statement<'c>> {
-        oxc::allocator::Vec::from_iter_in(
-            self.statements
-                .into_iter()
-                .map(|statement| statement.into_oxc(ctx)),
-            ctx.allocator,
-        )
+        println!("compiling block to vec of statements");
+        let statements = self
+            .statements
+            .into_iter()
+            .map(|statement| statement.into_oxc(ctx));
+        let return_value = self.return_value.map(|return_value| {
+            AstBuilder::new(ctx.allocator)
+                .statement_return(Span::new(0, 0), Some(return_value.into_oxc(ctx)))
+        });
+        let mut vec = oxc::allocator::Vec::from_iter_in(statements, ctx.allocator);
+        if let Some(return_value) = return_value {
+            vec.push(return_value);
+        }
+        vec
     }
 }
 
 impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Block {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
+        println!("compiling block to expression");
         let callee = AstBuilder::new(ctx.allocator).expression_arrow_function(
             Span::new(0, 0),
             false,
@@ -176,6 +188,7 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Block {
 
 impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Expression {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
+        println!("compiling expression to expression");
         match self {
             oxidescript::parser::ast::Expression::IdentifierExpression(ident) => {
                 ident.into_oxc(ctx)
@@ -191,109 +204,10 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Expression {
             .expression_array(Span::new(0, 0), exprs.into_oxc(ctx), None),
             oxidescript::parser::ast::Expression::IfExpression(expr) => expr.into_oxc(ctx),
             oxidescript::parser::ast::Expression::BlockExpression(block) => todo!(),
-            oxidescript::parser::ast::Expression::CallExpression(expr) => todo!(),
+            oxidescript::parser::ast::Expression::CallExpression(expr) => expr.into_oxc(ctx),
             oxidescript::parser::ast::Expression::IndexExpression(expr) => todo!(),
             oxidescript::parser::ast::Expression::MemberAccessExpression(expr) => todo!(),
         }
-    }
-}
-
-impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::IfExpr {
-    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
-        AstBuilder::new(ctx.allocator).expression_call(
-            Span::new(0, 0),
-            AstBuilder::new(ctx.allocator).expression_arrow_function(
-                Span::new(0, 0),
-                false,
-                false,
-                None::<TSTypeParameterDeclaration>,
-                AstBuilder::new(ctx.allocator).formal_parameters(
-                    Span::new(0, 0),
-                    oxc::ast::ast::FormalParameterKind::FormalParameter,
-                    oxc::allocator::Vec::new_in(ctx.allocator),
-                    None::<BindingRestElement>,
-                ),
-                None::<TSTypeAnnotation>,
-                AstBuilder::new(ctx.allocator).function_body(
-                    Span::new(0, 0),
-                    oxc::allocator::Vec::new_in(ctx.allocator),
-                    oxc::allocator::Vec::from_iter_in([self.into_oxc(ctx)], ctx.allocator),
-                ),
-            ),
-            None::<TSTypeParameterInstantiation>,
-            oxc::allocator::Vec::new_in(ctx.allocator),
-            false,
-        )
-    }
-}
-
-impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::IfExpr {
-    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Statement<'c> {
-        AstBuilder::new(ctx.allocator).statement_if(
-            Span::new(0, 0),
-            self.condition.into_oxc(ctx),
-            AstBuilder::new(ctx.allocator)
-                .statement_block(Span::new(0, 0), self.then_block.into_oxc(ctx)),
-            if let Some(else_block) = self.else_block {
-                if !self.else_if_blocks.is_empty() {
-                    let mut iter = self.else_if_blocks.into_iter().rev();
-                    let mut inner = iter.next().map(|block| {
-                        AstBuilder::new(ctx.allocator).statement_if(
-                            Span::new(0, 0),
-                            block.condition.into_oxc(ctx),
-                            AstBuilder::new(ctx.allocator)
-                                .statement_block(Span::new(0, 0), block.then_block.into_oxc(ctx)),
-                            Some(
-                                AstBuilder::new(ctx.allocator)
-                                    .statement_block(Span::new(0, 0), else_block.into_oxc(ctx)),
-                            ),
-                        )
-                    });
-                    for else_if_block in iter {
-                        inner = Some(AstBuilder::new(ctx.allocator).statement_if(
-                            Span::new(0, 0),
-                            else_if_block.condition.into_oxc(ctx),
-                            AstBuilder::new(ctx.allocator).statement_block(
-                                Span::new(0, 0),
-                                else_if_block.then_block.into_oxc(ctx),
-                            ),
-                            inner,
-                        ));
-                    }
-                    inner
-                } else {
-                    Some(
-                        AstBuilder::new(ctx.allocator)
-                            .statement_block(Span::new(0, 0), else_block.into_oxc(ctx)),
-                    )
-                }
-            } else if !self.else_if_blocks.is_empty() {
-                let mut iter = self.else_if_blocks.into_iter().rev();
-                let mut inner = iter.next().map(|block| {
-                    AstBuilder::new(ctx.allocator).statement_if(
-                        Span::new(0, 0),
-                        block.condition.into_oxc(ctx),
-                        AstBuilder::new(ctx.allocator)
-                            .statement_block(Span::new(0, 0), block.then_block.into_oxc(ctx)),
-                        None,
-                    )
-                });
-                for else_if_block in iter {
-                    inner = Some(AstBuilder::new(ctx.allocator).statement_if(
-                        Span::new(0, 0),
-                        else_if_block.condition.into_oxc(ctx),
-                        AstBuilder::new(ctx.allocator).statement_block(
-                            Span::new(0, 0),
-                            else_if_block.then_block.into_oxc(ctx),
-                        ),
-                        inner,
-                    ));
-                }
-                inner
-            } else {
-                None
-            },
-        )
     }
 }
 
@@ -304,6 +218,18 @@ impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, ArrayExpressionElement<'c>>>
         self,
         ctx: &'c JavascriptCompilerContext<'c>,
     ) -> oxc::allocator::Vec<'c, ArrayExpressionElement<'c>> {
+        AstBuilder::new(ctx.allocator)
+            .vec_from_iter(self.into_iter().map(|expr| expr.into_oxc(ctx)))
+    }
+}
+
+impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, Argument<'c>>>
+    for Vec<oxidescript::parser::ast::Expression>
+{
+    fn into_oxc(
+        self,
+        ctx: &'c JavascriptCompilerContext<'c>,
+    ) -> oxc::allocator::Vec<'c, Argument<'c>> {
         AstBuilder::new(ctx.allocator)
             .vec_from_iter(self.into_iter().map(|expr| expr.into_oxc(ctx)))
     }
@@ -324,6 +250,30 @@ impl<'c> IntoOxc<'c, ArrayExpressionElement<'c>> for oxidescript::parser::ast::E
             oxidescript::parser::ast::Expression::ArrayExpression(exprs) => todo!(),
             oxidescript::parser::ast::Expression::IfExpression(expr) => todo!(),
             oxidescript::parser::ast::Expression::BlockExpression(block) => todo!(),
+            oxidescript::parser::ast::Expression::CallExpression(expr) => todo!(),
+            oxidescript::parser::ast::Expression::IndexExpression(expr) => todo!(),
+            oxidescript::parser::ast::Expression::MemberAccessExpression(expr) => todo!(),
+        }
+    }
+}
+
+impl<'c> IntoOxc<'c, Argument<'c>> for oxidescript::parser::ast::Expression {
+    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Argument<'c> {
+        match self {
+            oxidescript::parser::ast::Expression::IdentifierExpression(ident) => {
+                Argument::Identifier(oxc::allocator::Box::new_in(
+                    ident.into_oxc(ctx),
+                    ctx.allocator,
+                ))
+            }
+            oxidescript::parser::ast::Expression::LiteralExpression(literal) => {
+                literal.into_oxc(ctx)
+            }
+            oxidescript::parser::ast::Expression::UnaryExpression(expr) => todo!(),
+            oxidescript::parser::ast::Expression::InfixExpression(expr) => expr.into_oxc(ctx),
+            oxidescript::parser::ast::Expression::ArrayExpression(expr) => todo!(),
+            oxidescript::parser::ast::Expression::IfExpression(expr) => todo!(),
+            oxidescript::parser::ast::Expression::BlockExpression(expr) => todo!(),
             oxidescript::parser::ast::Expression::CallExpression(expr) => todo!(),
             oxidescript::parser::ast::Expression::IndexExpression(expr) => todo!(),
             oxidescript::parser::ast::Expression::MemberAccessExpression(expr) => todo!(),

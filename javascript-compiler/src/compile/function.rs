@@ -1,5 +1,8 @@
 use oxc::{
-    ast::ast::{FormalParameter, FormalParameters},
+    ast::{
+        ast::{Expression, FormalParameter, FormalParameters, TSTypeParameterInstantiation},
+        AstBuilder,
+    },
     span::Span,
 };
 
@@ -29,5 +32,17 @@ impl<'c> IntoOxc<'c, FormalParameter<'c>> for oxidescript::parser::ast::Paramete
             r#override: false,
             decorators: oxc::allocator::Vec::new_in(ctx.allocator),
         }
+    }
+}
+
+impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::CallExpr {
+    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
+        AstBuilder::new(ctx.allocator).expression_call(
+            Span::new(0, 0),
+            self.lhs.into_oxc(ctx),
+            None::<TSTypeParameterInstantiation>,
+            self.arguments.into_oxc(ctx),
+            false,
+        )
     }
 }
