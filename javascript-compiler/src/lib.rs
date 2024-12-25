@@ -1,5 +1,5 @@
 use oxc::allocator::Allocator;
-use oxc_codegen::Gen;
+use oxc_codegen::Codegen;
 use oxidescript::compiler::Compiler;
 
 mod compile;
@@ -18,8 +18,9 @@ impl Compiler for JavascriptCompiler {
     fn compile(&self, program: oxidescript::parser::ast::Program) -> String {
         let ctx = JavascriptCompilerContext::new(&self.allocator);
         let compiled_ast = program.into_oxc(&ctx);
-        //compiled.gen();
-        todo!();
+        let code_gen = Codegen::new();
+        let code = code_gen.build(&compiled_ast);
+        code.code
     }
 }
 
@@ -31,10 +32,6 @@ impl<'ctx> JavascriptCompilerContext<'ctx> {
     fn new(allocator: &'ctx Allocator) -> Self {
         JavascriptCompilerContext { allocator }
     }
-}
-
-trait JavascriptCompile {
-    fn compile<'ctx>(&'ctx self, ctx: &'ctx JavascriptCompilerContext<'ctx>) -> impl Gen;
 }
 
 trait IntoOxc<'c, T> {

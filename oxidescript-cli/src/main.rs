@@ -1,16 +1,16 @@
 use std::{
     fs::read_to_string,
-    os::unix::process,
     path::{Path, PathBuf},
     process::{exit, Command},
 };
 
 use clap::Parser as ClapParser;
 use oxidescript::{
-    compiler::JavascriptCompiler,
+    compiler::Compiler,
     lexer::{tokens::Tokens, Lexer},
     parser::Parser,
 };
+use oxidescript_javascript_compiler::JavascriptCompiler;
 
 #[derive(clap::Parser, Debug)]
 #[command(version)]
@@ -149,7 +149,8 @@ fn compile_file(path: &Path, ctx: &Context) -> String {
         println!("AST: {:#?}", &ast);
     }
 
-    let compiled = JavascriptCompiler::compile(ast);
+    let compiler = JavascriptCompiler::new();
+    let compiled = compiler.compile(ast);
     if ctx.verbose {
         println!("{}", compiled);
     }
