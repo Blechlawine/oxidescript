@@ -1,9 +1,6 @@
 use oxc::{
     ast::{
-        ast::{
-            Argument, ArrayExpressionElement, BooleanLiteral, Expression, NumberBase,
-            NumericLiteral, StringLiteral,
-        },
+        ast::{BooleanLiteral, Expression, NumberBase, NumericLiteral, StringLiteral},
         AstBuilder,
     },
     span::Span,
@@ -24,47 +21,6 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Literal {
             oxidescript::parser::ast::Literal::BooleanLiteral(b) => {
                 AstBuilder::new(ctx.allocator).expression_boolean_literal(Span::new(0, 0), b)
             }
-        }
-    }
-}
-
-impl<'c> IntoOxc<'c, ArrayExpressionElement<'c>> for oxidescript::parser::ast::Literal {
-    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> ArrayExpressionElement<'c> {
-        match self {
-            oxidescript::parser::ast::Literal::StringLiteral(s) => {
-                ArrayExpressionElement::StringLiteral(oxc::allocator::Box::new_in(
-                    s.into_oxc(ctx),
-                    ctx.allocator,
-                ))
-            }
-            oxidescript::parser::ast::Literal::NumberLiteral(n) => {
-                ArrayExpressionElement::NumericLiteral(oxc::allocator::Box::new_in(
-                    n.into_oxc(ctx),
-                    ctx.allocator,
-                ))
-            }
-            oxidescript::parser::ast::Literal::BooleanLiteral(b) => {
-                ArrayExpressionElement::BooleanLiteral(oxc::allocator::Box::new_in(
-                    b.into_oxc(ctx),
-                    ctx.allocator,
-                ))
-            }
-        }
-    }
-}
-
-impl<'c> IntoOxc<'c, Argument<'c>> for oxidescript::parser::ast::Literal {
-    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Argument<'c> {
-        match self {
-            oxidescript::parser::ast::Literal::StringLiteral(inner) => Argument::StringLiteral(
-                oxc::allocator::Box::new_in(inner.into_oxc(ctx), ctx.allocator),
-            ),
-            oxidescript::parser::ast::Literal::NumberLiteral(inner) => Argument::NumericLiteral(
-                oxc::allocator::Box::new_in(inner.into_oxc(ctx), ctx.allocator),
-            ),
-            oxidescript::parser::ast::Literal::BooleanLiteral(inner) => Argument::BooleanLiteral(
-                oxc::allocator::Box::new_in(inner.into_oxc(ctx), ctx.allocator),
-            ),
         }
     }
 }

@@ -217,7 +217,7 @@ impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, ArrayExpressionElement<'c>>>
         ctx: &'c JavascriptCompilerContext<'c>,
     ) -> oxc::allocator::Vec<'c, ArrayExpressionElement<'c>> {
         AstBuilder::new(ctx.allocator)
-            .vec_from_iter(self.into_iter().map(|expr| expr.into_oxc(ctx)))
+            .vec_from_iter(self.into_iter().map(|expr| expr.into_oxc(ctx).into()))
     }
 }
 
@@ -229,52 +229,6 @@ impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, Argument<'c>>>
         ctx: &'c JavascriptCompilerContext<'c>,
     ) -> oxc::allocator::Vec<'c, Argument<'c>> {
         AstBuilder::new(ctx.allocator)
-            .vec_from_iter(self.into_iter().map(|expr| expr.into_oxc(ctx)))
-    }
-}
-
-impl<'c> IntoOxc<'c, ArrayExpressionElement<'c>> for oxidescript::parser::ast::Expression {
-    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> ArrayExpressionElement<'c> {
-        match self {
-            oxidescript::parser::ast::Expression::IdentifierExpression(ident) => {
-                ArrayExpressionElement::Identifier(oxc::allocator::Box::new_in(
-                    ident.into_oxc(ctx),
-                    ctx.allocator,
-                ))
-            }
-            oxidescript::parser::ast::Expression::LiteralExpression(literal) => todo!(),
-            oxidescript::parser::ast::Expression::UnaryExpression(expr) => todo!(),
-            oxidescript::parser::ast::Expression::InfixExpression(expr) => todo!(),
-            oxidescript::parser::ast::Expression::ArrayExpression(exprs) => todo!(),
-            oxidescript::parser::ast::Expression::IfExpression(expr) => todo!(),
-            oxidescript::parser::ast::Expression::BlockExpression(block) => todo!(),
-            oxidescript::parser::ast::Expression::CallExpression(expr) => todo!(),
-            oxidescript::parser::ast::Expression::IndexExpression(expr) => todo!(),
-            oxidescript::parser::ast::Expression::MemberAccessExpression(expr) => todo!(),
-        }
-    }
-}
-
-impl<'c> IntoOxc<'c, Argument<'c>> for oxidescript::parser::ast::Expression {
-    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Argument<'c> {
-        match self {
-            oxidescript::parser::ast::Expression::IdentifierExpression(ident) => {
-                Argument::Identifier(oxc::allocator::Box::new_in(
-                    ident.into_oxc(ctx),
-                    ctx.allocator,
-                ))
-            }
-            oxidescript::parser::ast::Expression::LiteralExpression(literal) => {
-                literal.into_oxc(ctx)
-            }
-            oxidescript::parser::ast::Expression::UnaryExpression(expr) => todo!(),
-            oxidescript::parser::ast::Expression::InfixExpression(expr) => expr.into_oxc(ctx),
-            oxidescript::parser::ast::Expression::ArrayExpression(expr) => todo!(),
-            oxidescript::parser::ast::Expression::IfExpression(expr) => todo!(),
-            oxidescript::parser::ast::Expression::BlockExpression(expr) => todo!(),
-            oxidescript::parser::ast::Expression::CallExpression(expr) => expr.into_oxc(ctx).into(),
-            oxidescript::parser::ast::Expression::IndexExpression(expr) => todo!(),
-            oxidescript::parser::ast::Expression::MemberAccessExpression(expr) => todo!(),
-        }
+            .vec_from_iter(self.into_iter().map(|expr| expr.into_oxc(ctx).into()))
     }
 }

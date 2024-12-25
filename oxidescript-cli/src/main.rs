@@ -1,6 +1,5 @@
 use std::{
     fs::read_to_string,
-    io::Write,
     path::{Path, PathBuf},
     process::{exit, Command},
 };
