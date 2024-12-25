@@ -1,7 +1,6 @@
 use nom::{
     branch::alt,
     combinator::map,
-    multi::many0,
     sequence::{terminated, tuple},
     IResult,
 };
@@ -12,7 +11,7 @@ use super::{
     ast::Declaration,
     atoms::*,
     expression::parse_expression,
-    function::{parse_block, parse_parameter, parse_parameters},
+    function::{parse_block, parse_parameters},
     parse_identifier,
 };
 
