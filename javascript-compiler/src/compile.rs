@@ -13,6 +13,7 @@ use oxc::{
 pub mod conditional;
 pub mod function;
 pub mod ident;
+pub mod index;
 pub mod infix;
 pub mod literal;
 pub mod member_access;
@@ -199,9 +200,9 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Expression {
             )
             .expression_array(Span::new(0, 0), exprs.into_oxc(ctx), None),
             oxidescript::parser::ast::Expression::IfExpression(expr) => expr.into_oxc(ctx),
-            oxidescript::parser::ast::Expression::BlockExpression(block) => todo!(),
+            oxidescript::parser::ast::Expression::BlockExpression(block) => block.into_oxc(ctx),
             oxidescript::parser::ast::Expression::CallExpression(expr) => expr.into_oxc(ctx),
-            oxidescript::parser::ast::Expression::IndexExpression(expr) => todo!(),
+            oxidescript::parser::ast::Expression::IndexExpression(expr) => expr.into_oxc(ctx),
             oxidescript::parser::ast::Expression::MemberAccessExpression(expr) => {
                 expr.into_oxc(ctx)
             }
