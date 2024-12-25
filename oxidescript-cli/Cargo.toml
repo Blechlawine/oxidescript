@@ -11,3 +11,4 @@ path = "src/main.rs"
 clap = { version = "4.2.5", features = ["derive"] }
 oxidescript = { path = "../oxidescript" }
 oxidescript_javascript_compiler = { path = "../javascript-compiler" }
+tempfile = "3"

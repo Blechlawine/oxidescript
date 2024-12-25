@@ -5,3 +5,5 @@ fn fibonacci_recursive(n: number) {
         fibonacci_recursive(n - 1) + fibonacci_recursive(n - 2)
     }
 }
+
+console.log(fibonacci_recursive(10))

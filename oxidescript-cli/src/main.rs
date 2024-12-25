@@ -1,5 +1,6 @@
 use std::{
     fs::read_to_string,
+    io::Write,
     path::{Path, PathBuf},
     process::{exit, Command},
 };
@@ -37,7 +38,7 @@ enum OxideCommand {
         with: Option<JavascriptRuntime>,
 
         #[arg(short, long)]
-        devdir: PathBuf,
+        devdir: Option<PathBuf>,
     },
 }
 
@@ -71,6 +72,8 @@ impl From<&str> for JavascriptRuntime {
 struct Context {
     verbose: bool,
 }
+
+const DEFAULT_DEVDIR: &str = "./.oxidescript-tmp";
 
 fn main() {
     let args = Args::parse();
@@ -114,11 +117,11 @@ fn main() {
             std::fs::write(compiled_path, compiled).unwrap();
         }
         OxideCommand::Run { with, devdir } => {
+            let devdir = devdir.as_deref().unwrap_or(DEFAULT_DEVDIR.as_ref());
             if devdir.exists() {
-                std::fs::remove_dir_all(&devdir).unwrap();
+                std::fs::remove_dir_all(devdir).unwrap();
             }
-            std::fs::create_dir_all(&devdir).unwrap();
-
+            std::fs::create_dir_all(devdir).unwrap();
             let with = with.unwrap_or_default();
 
             let compiled = compile_file(&args.input, &ctx);

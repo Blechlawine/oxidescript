@@ -7,3 +7,4 @@ function fibonacci_recursive(n) {
 		}
 	})();
 }
+console.log(fibonacci_recursive(10));

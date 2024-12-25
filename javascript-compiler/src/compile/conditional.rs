@@ -13,7 +13,6 @@ use crate::{IntoOxc, JavascriptCompilerContext};
 
 impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::IfExpr {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
-        println!("compiling if expression to expression");
         AstBuilder::new(ctx.allocator).expression_call(
             Span::new(0, 0),
             AstBuilder::new(ctx.allocator).expression_arrow_function(
@@ -43,7 +42,6 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::IfExpr {
 
 impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::IfExpr {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Statement<'c> {
-        println!("compiling if expression to statement");
         AstBuilder::new(ctx.allocator).statement_if(
             Span::new(0, 0),
             self.condition.into_oxc(ctx),

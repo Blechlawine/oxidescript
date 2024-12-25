@@ -1,6 +1,6 @@
 use oxc::{
     ast::{
-        ast::{BindingIdentifier, BindingPattern, Expression, IdentifierReference},
+        ast::{BindingIdentifier, BindingPattern, Expression, IdentifierName, IdentifierReference},
         AstBuilder,
     },
     span::Span,
@@ -41,5 +41,11 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Identifier {
 impl<'c> IntoOxc<'c, IdentifierReference<'c>> for oxidescript::parser::ast::Identifier {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> IdentifierReference {
         AstBuilder::new(ctx.allocator).identifier_reference(Span::new(0, 0), self.0)
+    }
+}
+
+impl<'c> IntoOxc<'c, IdentifierName<'c>> for oxidescript::parser::ast::Identifier {
+    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> IdentifierName<'c> {
+        AstBuilder::new(ctx.allocator).identifier_name(Span::new(0, 0), self.0)
     }
 }

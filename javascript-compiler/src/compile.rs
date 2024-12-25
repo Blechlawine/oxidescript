@@ -15,6 +15,7 @@ pub mod function;
 pub mod ident;
 pub mod infix;
 pub mod literal;
+pub mod member_access;
 pub mod unary;
 
 use crate::{IntoOxc, JavascriptCompilerContext};
@@ -38,7 +39,6 @@ impl<'c> IntoOxc<'c, Program<'c>> for oxidescript::parser::ast::Program {
 
 impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Statement {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Statement {
-        println!("compiling statement to statement");
         match self {
             oxidescript::parser::ast::Statement::ExpressionStatement { expression, .. } => {
                 AstBuilder::new(ctx.allocator)
@@ -125,7 +125,6 @@ impl<'c> IntoOxc<'c, oxc::allocator::Box<'c, FunctionBody<'c>>>
         self,
         ctx: &'c JavascriptCompilerContext<'c>,
     ) -> oxc::allocator::Box<'c, FunctionBody<'c>> {
-        println!("compiling block to function body");
         oxc::allocator::Box::new_in(
             AstBuilder::new(ctx.allocator).function_body(
                 Span::new(0, 0),
@@ -142,7 +141,6 @@ impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, Statement<'c>>> for oxidescript::pa
         self,
         ctx: &'c JavascriptCompilerContext<'c>,
     ) -> oxc::allocator::Vec<'c, Statement<'c>> {
-        println!("compiling block to vec of statements");
         let statements = self
             .statements
             .into_iter()
@@ -161,7 +159,6 @@ impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, Statement<'c>>> for oxidescript::pa
 
 impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Block {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
-        println!("compiling block to expression");
         let callee = AstBuilder::new(ctx.allocator).expression_arrow_function(
             Span::new(0, 0),
             false,
@@ -188,7 +185,6 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Block {
 
 impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Expression {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
-        println!("compiling expression to expression");
         match self {
             oxidescript::parser::ast::Expression::IdentifierExpression(ident) => {
                 ident.into_oxc(ctx)
@@ -206,7 +202,9 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Expression {
             oxidescript::parser::ast::Expression::BlockExpression(block) => todo!(),
             oxidescript::parser::ast::Expression::CallExpression(expr) => expr.into_oxc(ctx),
             oxidescript::parser::ast::Expression::IndexExpression(expr) => todo!(),
-            oxidescript::parser::ast::Expression::MemberAccessExpression(expr) => todo!(),
+            oxidescript::parser::ast::Expression::MemberAccessExpression(expr) => {
+                expr.into_oxc(ctx)
+            }
         }
     }
 }
@@ -274,7 +272,7 @@ impl<'c> IntoOxc<'c, Argument<'c>> for oxidescript::parser::ast::Expression {
             oxidescript::parser::ast::Expression::ArrayExpression(expr) => todo!(),
             oxidescript::parser::ast::Expression::IfExpression(expr) => todo!(),
             oxidescript::parser::ast::Expression::BlockExpression(expr) => todo!(),
-            oxidescript::parser::ast::Expression::CallExpression(expr) => todo!(),
+            oxidescript::parser::ast::Expression::CallExpression(expr) => expr.into_oxc(ctx).into(),
             oxidescript::parser::ast::Expression::IndexExpression(expr) => todo!(),
             oxidescript::parser::ast::Expression::MemberAccessExpression(expr) => todo!(),
         }
