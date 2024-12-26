@@ -1,6 +1,9 @@
 use oxc::{
     ast::{
-        ast::{BindingIdentifier, BindingPattern, Expression, IdentifierName, IdentifierReference},
+        ast::{
+            BindingIdentifier, BindingPattern, Expression, ForStatementLeft, IdentifierName,
+            IdentifierReference, VariableDeclarator,
+        },
         AstBuilder,
     },
     span::Span,
@@ -47,5 +50,28 @@ impl<'c> IntoOxc<'c, IdentifierReference<'c>> for oxidescript::parser::ast::Iden
 impl<'c> IntoOxc<'c, IdentifierName<'c>> for oxidescript::parser::ast::Identifier {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> IdentifierName<'c> {
         AstBuilder::new(ctx.allocator).identifier_name(Span::new(0, 0), self.0)
+    }
+}
+
+impl<'c> IntoOxc<'c, ForStatementLeft<'c>> for oxidescript::parser::ast::Identifier {
+    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> ForStatementLeft<'c> {
+        ForStatementLeft::VariableDeclaration(oxc::allocator::Box::new_in(
+            oxc::ast::ast::VariableDeclaration {
+                span: Span::new(0, 0),
+                kind: oxc::ast::ast::VariableDeclarationKind::Const,
+                declarations: oxc::allocator::Vec::from_iter_in(
+                    [VariableDeclarator {
+                        span: Span::new(0, 0),
+                        kind: oxc::ast::ast::VariableDeclarationKind::Const,
+                        id: self.into_oxc(ctx),
+                        init: None,
+                        definite: false,
+                    }],
+                    ctx.allocator,
+                ),
+                declare: false,
+            },
+            ctx.allocator,
+        ))
     }
 }

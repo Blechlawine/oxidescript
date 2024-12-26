@@ -6,4 +6,5 @@ edition = "2021"
 [dependencies]
 oxc_codegen = "0.44"
 oxc = "0.44"
+rand = "0.8"
 oxidescript = { path = "../oxidescript" }

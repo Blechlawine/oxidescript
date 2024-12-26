@@ -9,7 +9,7 @@ use nom::sequence::{delimited, pair, preceded, tuple};
 use nom::Err;
 use nom::{branch::alt, combinator::map, error_position, IResult};
 
-use super::ast::{ElseIfExpr, IfExpr, Precedence, UnaryExpr, UnaryOperator};
+use super::ast::{ElseIfExpr, ForExpr, IfExpr, Precedence, UnaryExpr, UnaryOperator};
 use super::function::parse_block;
 use super::pratt_expression::parse_pratt_expression;
 use super::{ast::Expression, atoms::*, parse_identifier, parse_literal};
@@ -37,6 +37,7 @@ pub fn parse_atom_expression(input: Tokens) -> IResult<Tokens, Expression> {
         parse_array_expression,
         parse_block_expression,
         parse_if_expression,
+        parse_for_expression,
     ))(input)
 }
 
@@ -154,6 +155,29 @@ fn parse_if_expression(input: Tokens) -> IResult<Tokens, Expression> {
                                 panic!("parse_block_expression parsed something other than a block expression");
                             }
                         }),
+                })
+            } else {
+                panic!("parse_block_expression parsed something other than a block expression");
+            }
+        },
+    )(input)
+}
+
+fn parse_for_expression(input: Tokens) -> IResult<Tokens, Expression> {
+    map(
+        tuple((
+            for_tag,
+            parse_identifier,
+            in_tag,
+            parse_expression,
+            parse_block_expression,
+        )),
+        |(_for, lhs, _in, rhs, body)| {
+            if let Expression::BlockExpression(body) = body {
+                Expression::ForExpression(ForExpr {
+                    lhs,
+                    rhs: Box::new(rhs),
+                    body,
                 })
             } else {
                 panic!("parse_block_expression parsed something other than a block expression");

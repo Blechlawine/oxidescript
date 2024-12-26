@@ -1,21 +1,23 @@
 use oxc::{
     ast::{
         ast::{
-            Argument, ArrayExpressionElement, BindingRestElement, Expression, FunctionBody,
-            Program, Statement, TSTypeAnnotation, TSTypeParameterDeclaration,
-            TSTypeParameterInstantiation, VariableDeclarator,
+            Argument, ArrayExpressionElement, BindingRestElement, Expression, Program, Statement,
+            TSTypeAnnotation, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
+            VariableDeclarator,
         },
         AstBuilder,
     },
     span::{SourceType, Span},
 };
 
+pub mod block;
 pub mod conditional;
 pub mod function;
 pub mod ident;
 pub mod index;
 pub mod infix;
 pub mod literal;
+pub mod r#loop;
 pub mod member_access;
 pub mod unary;
 
@@ -119,71 +121,6 @@ impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Statement {
     }
 }
 
-impl<'c> IntoOxc<'c, oxc::allocator::Box<'c, FunctionBody<'c>>>
-    for oxidescript::parser::ast::Block
-{
-    fn into_oxc(
-        self,
-        ctx: &'c JavascriptCompilerContext<'c>,
-    ) -> oxc::allocator::Box<'c, FunctionBody<'c>> {
-        oxc::allocator::Box::new_in(
-            AstBuilder::new(ctx.allocator).function_body(
-                Span::new(0, 0),
-                oxc::allocator::Vec::new_in(ctx.allocator),
-                self.into_oxc(ctx),
-            ),
-            ctx.allocator,
-        )
-    }
-}
-
-impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, Statement<'c>>> for oxidescript::parser::ast::Block {
-    fn into_oxc(
-        self,
-        ctx: &'c JavascriptCompilerContext<'c>,
-    ) -> oxc::allocator::Vec<'c, Statement<'c>> {
-        let statements = self
-            .statements
-            .into_iter()
-            .map(|statement| statement.into_oxc(ctx));
-        let return_value = self.return_value.map(|return_value| {
-            AstBuilder::new(ctx.allocator)
-                .statement_return(Span::new(0, 0), Some(return_value.into_oxc(ctx)))
-        });
-        let mut vec = oxc::allocator::Vec::from_iter_in(statements, ctx.allocator);
-        if let Some(return_value) = return_value {
-            vec.push(return_value);
-        }
-        vec
-    }
-}
-
-impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Block {
-    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
-        let callee = AstBuilder::new(ctx.allocator).expression_arrow_function(
-            Span::new(0, 0),
-            false,
-            false,
-            None::<TSTypeParameterDeclaration>,
-            AstBuilder::new(ctx.allocator).formal_parameters(
-                Span::new(0, 0),
-                oxc::ast::ast::FormalParameterKind::FormalParameter,
-                oxc::allocator::Vec::new_in(ctx.allocator),
-                None::<BindingRestElement>,
-            ),
-            None::<TSTypeAnnotation>,
-            <Self as IntoOxc<oxc::allocator::Box<FunctionBody>>>::into_oxc(self, ctx),
-        );
-        AstBuilder::new(ctx.allocator).expression_call(
-            Span::new(0, 0),
-            callee,
-            None::<TSTypeParameterInstantiation>,
-            oxc::allocator::Vec::new_in(ctx.allocator),
-            false,
-        )
-    }
-}
-
 impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Expression {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
         match self {
@@ -206,6 +143,7 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Expression {
             oxidescript::parser::ast::Expression::MemberAccessExpression(expr) => {
                 expr.into_oxc(ctx)
             }
+            oxidescript::parser::ast::Expression::ForExpression(expr) => expr.into_oxc(ctx),
         }
     }
 }
@@ -232,4 +170,34 @@ impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, Argument<'c>>>
         AstBuilder::new(ctx.allocator)
             .vec_from_iter(self.into_iter().map(|expr| expr.into_oxc(ctx).into()))
     }
+}
+
+pub fn iife<'c>(
+    body: oxc::allocator::Vec<'c, Statement<'c>>,
+    ctx: &'c JavascriptCompilerContext<'c>,
+) -> Expression<'c> {
+    AstBuilder::new(ctx.allocator).expression_call(
+        Span::new(0, 0),
+        AstBuilder::new(ctx.allocator).expression_arrow_function(
+            Span::new(0, 0),
+            false,
+            false,
+            None::<TSTypeParameterDeclaration>,
+            AstBuilder::new(ctx.allocator).formal_parameters(
+                Span::new(0, 0),
+                oxc::ast::ast::FormalParameterKind::FormalParameter,
+                oxc::allocator::Vec::new_in(ctx.allocator),
+                None::<BindingRestElement>,
+            ),
+            None::<TSTypeAnnotation>,
+            AstBuilder::new(ctx.allocator).function_body(
+                Span::new(0, 0),
+                oxc::allocator::Vec::new_in(ctx.allocator),
+                body,
+            ),
+        ),
+        None::<TSTypeParameterInstantiation>,
+        oxc::allocator::Vec::new_in(ctx.allocator),
+        false,
+    )
 }

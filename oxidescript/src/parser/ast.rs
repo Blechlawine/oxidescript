@@ -19,16 +19,19 @@ pub enum Expression {
     InfixExpression(InfixExpr),
     ArrayExpression(Vec<Expression>),
     IfExpression(IfExpr),
-    // ForExpression {
-    //     // TODO
-    // },
-    // MatchExpression {
-    //     // TODO
-    // },
+    ForExpression(ForExpr), // TODO
+    // MatchExpression(MatchExpr), // TODO
     BlockExpression(Box<Block>),
     CallExpression(CallExpr),
     IndexExpression(IndexExpr),
     MemberAccessExpression(MemberAccessExpr),
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct ForExpr {
+    pub lhs: Identifier,
+    pub rhs: Box<Expression>,
+    pub body: Box<Block>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -126,7 +129,6 @@ impl Display for Number {
 }
 impl TryFrom<Number> for f64 {
     type Error = ParseFloatError;
-
     fn try_from(value: Number) -> Result<Self, Self::Error> {
         match value {
             Number::F(s) => s.parse(),

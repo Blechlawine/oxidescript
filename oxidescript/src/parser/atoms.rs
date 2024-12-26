@@ -27,6 +27,8 @@ tag_token!(function_tag, Token::Function);
 tag_token!(return_tag, Token::Return);
 tag_token!(if_tag, Token::If);
 tag_token!(else_tag, Token::Else);
+tag_token!(for_tag, Token::For);
+tag_token!(in_tag, Token::In);
 
 tag_token!(assign_tag, Token::Assign);
 tag_token!(plus_tag, Token::Plus);

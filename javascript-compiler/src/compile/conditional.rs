@@ -1,9 +1,6 @@
 use oxc::{
     ast::{
-        ast::{
-            BindingRestElement, Expression, Statement, TSTypeAnnotation,
-            TSTypeParameterDeclaration, TSTypeParameterInstantiation,
-        },
+        ast::{Expression, Statement},
         AstBuilder,
     },
     span::Span,
@@ -11,31 +8,13 @@ use oxc::{
 
 use crate::{IntoOxc, JavascriptCompilerContext};
 
+use super::iife;
+
 impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::IfExpr {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
-        AstBuilder::new(ctx.allocator).expression_call(
-            Span::new(0, 0),
-            AstBuilder::new(ctx.allocator).expression_arrow_function(
-                Span::new(0, 0),
-                false,
-                false,
-                None::<TSTypeParameterDeclaration>,
-                AstBuilder::new(ctx.allocator).formal_parameters(
-                    Span::new(0, 0),
-                    oxc::ast::ast::FormalParameterKind::FormalParameter,
-                    oxc::allocator::Vec::new_in(ctx.allocator),
-                    None::<BindingRestElement>,
-                ),
-                None::<TSTypeAnnotation>,
-                AstBuilder::new(ctx.allocator).function_body(
-                    Span::new(0, 0),
-                    oxc::allocator::Vec::new_in(ctx.allocator),
-                    oxc::allocator::Vec::from_iter_in([self.into_oxc(ctx)], ctx.allocator),
-                ),
-            ),
-            None::<TSTypeParameterInstantiation>,
-            oxc::allocator::Vec::new_in(ctx.allocator),
-            false,
+        iife(
+            oxc::allocator::Vec::from_iter_in([self.into_oxc(ctx)], ctx.allocator),
+            ctx,
         )
     }
 }
