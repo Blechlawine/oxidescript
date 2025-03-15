@@ -1,27 +1,79 @@
-use crate::parser::ast::{Declaration, StructDecl, StructField, TypeExpression};
+use crate::parser::ast::{Declaration, Parameter, StructDecl, StructField, TypeExpression};
 
-use super::{Check, CheckContext, VariableType};
+use super::{Check, CheckContext, Variable, VariableType};
 
 impl Check for Declaration {
     fn check(&self, ctx: &CheckContext) -> VariableType {
         match self {
             Declaration::ConstDeclaration(identifier, expression) => {
-                ctx.scope
-                    .borrow_mut()
-                    .variables
-                    .insert(identifier.0.clone(), expression.check(ctx));
+                ctx.scope.borrow_mut().variables.insert(
+                    identifier.0.clone(),
+                    Variable {
+                        r#type: expression.check(ctx),
+                    },
+                );
                 VariableType::Void
             }
             Declaration::LetDeclaration(identifier, expression) => {
-                ctx.scope
-                    .borrow_mut()
-                    .variables
-                    .insert(identifier.0.clone(), expression.check(ctx));
+                ctx.scope.borrow_mut().variables.insert(
+                    identifier.0.clone(),
+                    Variable {
+                        r#type: expression.check(ctx),
+                    },
+                );
                 VariableType::Void
             }
-            Declaration::FunctionDeclaration(decl) => todo!("function type check"),
+            Declaration::FunctionDeclaration(decl) => {
+                let parameter_types = decl
+                    .parameters
+                    .iter()
+                    .map(|p| p.check(ctx))
+                    .collect::<Vec<_>>();
+                let expected_return_type = decl
+                    .return_type
+                    .as_ref()
+                    .map(|v| v.check(ctx))
+                    .unwrap_or_default();
+                ctx.scope.borrow_mut().variables.insert(
+                    decl.name.0.clone(),
+                    Variable {
+                        r#type: VariableType::Function {
+                            parameters: parameter_types.clone(),
+                            return_type: Box::new(expected_return_type.clone()),
+                        },
+                    },
+                );
+                if let Some(explicit_return_type) = &decl.return_type {
+                    let explicit_return_type = explicit_return_type.check(ctx);
+                    let inferred_return_type = decl.body.check(ctx);
+                    if explicit_return_type != inferred_return_type {
+                        panic!("Incorrect return type: {inferred_return_type}");
+                    } else {
+                        explicit_return_type
+                    }
+                } else {
+                    VariableType::Void
+                };
+                VariableType::Function {
+                    parameters: parameter_types,
+                    return_type: Box::new(expected_return_type),
+                }
+            }
             Declaration::StructDeclaration(decl) => decl.check(ctx),
         }
+    }
+}
+
+impl Check for Parameter {
+    fn check(&self, ctx: &CheckContext) -> VariableType {
+        let r#type = self.r#type.check(ctx);
+        ctx.scope.borrow_mut().variables.insert(
+            self.name.0.clone(),
+            Variable {
+                r#type: r#type.clone(),
+            },
+        );
+        r#type
     }
 }
 

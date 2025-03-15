@@ -1,6 +1,6 @@
 use crate::parser::ast::{
-    Expression, ForExpr, InfixExpr, InfixOperator, Literal, MemberAccessExpr, UnaryExpr,
-    UnaryOperator,
+    CallExpr, ElseIfExpr, Expression, ForExpr, IfExpr, InfixExpr, InfixOperator, Literal,
+    MemberAccessExpr, UnaryExpr, UnaryOperator,
 };
 
 use super::{Check, CheckContext, VariableType};
@@ -8,15 +8,17 @@ use super::{Check, CheckContext, VariableType};
 impl Check for Expression {
     fn check(&self, ctx: &CheckContext) -> VariableType {
         match self {
-            Expression::IdentifierExpression(identifier) => ctx.resolve_type(&identifier.0),
+            Expression::IdentifierExpression(identifier) => {
+                ctx.resolve_variable(&identifier.0).r#type
+            }
             Expression::LiteralExpression(literal) => literal.check(ctx),
             Expression::UnaryExpression(unary_expr) => unary_expr.check(ctx),
             Expression::InfixExpression(infix_expr) => infix_expr.check(ctx),
             Expression::ArrayExpression(vec) => todo!("array infer_type"),
-            Expression::IfExpression(if_expr) => todo!("if infer_type"),
+            Expression::IfExpression(if_expr) => if_expr.check(ctx),
             Expression::ForExpression(for_expr) => for_expr.check(ctx),
             Expression::BlockExpression(block) => todo!("block infer_type"),
-            Expression::CallExpression(call_expr) => todo!("call infer_type"),
+            Expression::CallExpression(call_expr) => call_expr.check(ctx),
             Expression::IndexExpression(index_expr) => todo!("index infer_type"),
             Expression::MemberAccessExpression(member_access_expr) => member_access_expr.check(ctx),
         }
@@ -130,6 +132,65 @@ impl Check for ForExpr {
             VariableType::Void
         } else {
             todo!("for expr infer type")
+        }
+    }
+}
+
+impl Check for IfExpr {
+    fn check(&self, ctx: &CheckContext) -> VariableType {
+        let condition_type = self.condition.check(ctx);
+        if condition_type != VariableType::Bool {
+            panic!("Expected bool, found: {condition_type}");
+        }
+        let then_type = self.then_block.check(ctx);
+        if !self
+            .else_if_blocks
+            .iter()
+            .map(|b| b.check(ctx))
+            .all(|t| t == then_type)
+        {
+            panic!("Expected {then_type}");
+        }
+        let else_type = self.else_block.as_ref().map(|b| b.check(ctx));
+        if let Some(else_type) = else_type {
+            if else_type != then_type {
+                panic!("Expected {then_type}, found: {else_type}");
+            }
+        }
+        then_type
+    }
+}
+
+impl Check for ElseIfExpr {
+    fn check(&self, ctx: &CheckContext) -> VariableType {
+        let condition_type = self.condition.check(ctx);
+        if condition_type != VariableType::Bool {
+            panic!("Expected bool, found: {condition_type}");
+        }
+        self.then_block.check(ctx)
+    }
+}
+
+impl Check for CallExpr {
+    fn check(&self, ctx: &CheckContext) -> VariableType {
+        let lhs_type = self.lhs.check(ctx);
+        if let VariableType::Function {
+            parameters,
+            return_type,
+        } = lhs_type
+        {
+            if !self
+                .arguments
+                .iter()
+                .map(|a| a.check(ctx))
+                .zip(parameters)
+                .all(|(given, expected)| given == expected)
+            {
+                panic!("Invalid argument type");
+            }
+            *return_type
+        } else {
+            panic!("Cannot call non-function type: {lhs_type}");
         }
     }
 }

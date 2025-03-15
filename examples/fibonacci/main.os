@@ -1,4 +1,4 @@
-fn fibonacci_recursive(n: number) {
+fn fibonacci_recursive(n: number) -> number {
     if n < 2 {
         n
     } else {

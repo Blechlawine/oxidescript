@@ -12,11 +12,16 @@ pub struct CheckContext {
 
 #[derive(Debug)]
 pub struct Scope {
-    variables: HashMap<String, VariableType>,
+    variables: HashMap<String, Variable>,
     types: HashMap<String, VariableType>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Variable {
+    r#type: VariableType,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub enum VariableType {
     String,
     Number,
@@ -25,7 +30,12 @@ pub enum VariableType {
         fields: HashMap<String, VariableType>,
     },
     Vec(Box<VariableType>),
+    Function {
+        parameters: Vec<VariableType>,
+        return_type: Box<VariableType>,
+    },
     /// the type which non-returning if and for expressions infer to
+    #[default]
     Void,
 }
 
@@ -33,11 +43,17 @@ impl Display for VariableType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             VariableType::String => f.write_str("String"),
-            VariableType::Number => f.write_str("Number"),
+            VariableType::Number => f.write_str("number"),
             VariableType::Bool => f.write_str("bool"),
             VariableType::Struct { .. } => f.write_str("Struct"),
             VariableType::Vec(variable_type) => write!(f, "Vec<{variable_type}>"),
             VariableType::Void => f.write_str("void"),
+            VariableType::Function {
+                parameters,
+                return_type,
+            } => {
+                write!(f, "({:?}) -> {}", parameters, return_type)
+            }
         }
     }
 }
@@ -69,13 +85,22 @@ impl CheckContext {
             .unwrap_or_else(|| panic!("Couldn't resolve type {type_name}"))
             .clone()
     }
+
+    pub fn resolve_variable(&self, variable_name: &str) -> Variable {
+        self.scope
+            .borrow()
+            .variables
+            .get(variable_name)
+            .unwrap_or_else(|| panic!("Couldn't find variable {variable_name} in scope"))
+            .clone()
+    }
 }
 
 impl Default for Scope {
     fn default() -> Self {
         let mut types = HashMap::new();
         types.insert("String".to_string(), VariableType::String);
-        types.insert("Number".to_string(), VariableType::Number);
+        types.insert("number".to_string(), VariableType::Number);
         types.insert("bool".to_string(), VariableType::Bool);
         Self {
             variables: HashMap::new(),
@@ -87,7 +112,7 @@ impl Default for Scope {
 #[cfg(test)]
 mod tests {
     use crate::{
-        checker::VariableType,
+        checker::{Variable, VariableType},
         lexer::{tokens::Tokens, Lexer},
         parser::Parser,
     };
@@ -105,7 +130,10 @@ mod tests {
         assert_eq!(inferred, VariableType::Void);
         assert_eq!(
             check_ctx.scope.borrow().variables.get("test"),
-            Some(VariableType::String).as_ref()
+            Some(Variable {
+                r#type: VariableType::String
+            })
+            .as_ref()
         );
     }
 }
