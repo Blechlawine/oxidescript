@@ -21,7 +21,7 @@ use self::utils::{concat_slice_vec, convert_vec_utf8};
 macro_rules! syntax {
     ($fn_name: ident, $tag_string: literal, $output_token: expr) => {
         fn $fn_name(s: &[u8]) -> IResult<&[u8], Token> {
-            map(tag($tag_string), |_| $output_token)(s)
+            map(tag($tag_string), |_| $output_token).parse(s)
         }
     };
 }
@@ -72,7 +72,8 @@ pub fn lex_operator(input: &[u8]) -> IResult<&[u8], Token> {
         multiply_operator,
         divide_operator,
         modulo_operator,
-    ))(input)
+    ))
+    .parse(input)
 }
 
 // punctuation
@@ -99,7 +100,8 @@ pub fn lex_punctuation(input: &[u8]) -> IResult<&[u8], Token> {
         r_bracket_punctuation,
         l_squirly_punctuation,
         r_squirly_punctuation,
-    ))(input)
+    ))
+    .parse(input)
 }
 
 fn parse_inside_string(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
@@ -120,11 +122,12 @@ fn string(input: &[u8]) -> IResult<&[u8], String> {
         tag("\""),
         map_res(parse_inside_string, convert_vec_utf8),
         tag("\""),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn lex_string(input: &[u8]) -> IResult<&[u8], Token> {
-    map(string, Token::StringLiteral)(input)
+    map(string, Token::StringLiteral).parse(input)
 }
 
 // Identifiers
@@ -159,7 +162,8 @@ fn lex_keyword_or_ident(input: &[u8]) -> IResult<&[u8], Token> {
                 _ => Token::Ident(syntax.to_string()),
             })
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 // Numbers
@@ -173,13 +177,14 @@ fn lex_number(input: &[u8]) -> IResult<&[u8], Token> {
             FromStr::from_str,
         ),
         Token::NumberLiteral,
-    )(input)
+    )
+    .parse(input)
 }
 
 // Illegal
 fn lex_illegal(input: &[u8]) -> IResult<&[u8], Token> {
     // This just matches anything to Token::Illegal, because it is the last parser to be called in lex_token
-    map(take(1usize), |_| Token::Illegal)(input)
+    map(take(1usize), |_| Token::Illegal).parse(input)
 }
 
 fn lex_token(input: &[u8]) -> IResult<&[u8], Token> {
@@ -190,11 +195,12 @@ fn lex_token(input: &[u8]) -> IResult<&[u8], Token> {
         lex_keyword_or_ident,
         lex_number,
         lex_illegal,
-    ))(input)
+    ))
+    .parse(input)
 }
 
 fn lex_tokens(input: &[u8]) -> IResult<&[u8], Vec<Token>> {
-    many0(delimited(multispace0, lex_token, multispace0))(input)
+    many0(delimited(multispace0, lex_token, multispace0)).parse(input)
 }
 
 pub struct Lexer;

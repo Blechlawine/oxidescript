@@ -1,13 +1,14 @@
 use core::panic;
 
-use crate::lexer::token::Token;
-use crate::lexer::tokens::Tokens;
 use nom::combinator::opt;
 use nom::error::ErrorKind;
 use nom::multi::many0;
-use nom::sequence::{delimited, pair, preceded, tuple};
-use nom::Err;
+use nom::sequence::{delimited, pair, preceded};
 use nom::{branch::alt, combinator::map, error_position, IResult};
+use nom::{Err, Parser};
+
+use crate::lexer::token::Token;
+use crate::lexer::tokens::Tokens;
 
 use super::ast::{ElseIfExpr, ForExpr, IfExpr, Precedence, UnaryExpr, UnaryOperator};
 use super::function::parse_block;
@@ -25,7 +26,8 @@ pub fn parse_expressions(input: Tokens) -> IResult<Tokens, Vec<Expression>> {
             many0(preceded(comma_tag, parse_expression)),
         ),
         |(first, second)| [&vec![first][..], &second[..]].concat(),
-    )(input)
+    )
+    .parse(input)
 }
 
 pub fn parse_atom_expression(input: Tokens) -> IResult<Tokens, Expression> {
@@ -38,23 +40,27 @@ pub fn parse_atom_expression(input: Tokens) -> IResult<Tokens, Expression> {
         parse_block_expression,
         parse_if_expression,
         parse_for_expression,
-    ))(input)
+    ))
+    .parse(input)
 }
 
 fn parse_literal_expression(input: Tokens) -> IResult<Tokens, Expression> {
     map(parse_literal, |literal| {
         Expression::LiteralExpression(literal)
-    })(input)
+    })
+    .parse(input)
 }
 
 fn parse_identifier_expression(input: Tokens) -> IResult<Tokens, Expression> {
     map(parse_identifier, |identifier| {
         Expression::IdentifierExpression(identifier)
-    })(input)
+    })
+    .parse(input)
 }
 
 fn parse_unary_expression(input: Tokens) -> IResult<Tokens, Expression> {
-    let (rest1, unary) = alt((plus_tag, minus_tag, logical_not_tag, bitwise_not_tag))(input)?;
+    let (rest1, unary) =
+        alt((plus_tag, minus_tag, logical_not_tag, bitwise_not_tag)).parse(input)?;
     if unary.tokens.is_empty() {
         Err(Err::Error(error_position!(input, ErrorKind::Tag)))
     } else {
@@ -94,7 +100,7 @@ fn parse_unary_expression(input: Tokens) -> IResult<Tokens, Expression> {
 }
 
 fn parse_paren_expression(input: Tokens) -> IResult<Tokens, Expression> {
-    delimited(l_paren_tag, parse_expression, r_paren_tag)(input)
+    delimited(l_paren_tag, parse_expression, r_paren_tag).parse(input)
 }
 
 fn parse_array_expression(input: Tokens) -> IResult<Tokens, Expression> {
@@ -105,30 +111,32 @@ fn parse_array_expression(input: Tokens) -> IResult<Tokens, Expression> {
             r_bracket_tag,
         ),
         Expression::ArrayExpression,
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_block_expression(input: Tokens) -> IResult<Tokens, Expression> {
     map(
         delimited(l_squirly_tag, parse_block, r_squirly_tag),
         |block| Expression::BlockExpression(Box::new(block)),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_if_expression(input: Tokens) -> IResult<Tokens, Expression> {
     map(
-        tuple((
+        (
             if_tag,
             parse_expression,
             parse_block_expression,
-            many0(tuple((
+            many0((
                 else_tag,
                 if_tag,
                 parse_expression,
                 parse_block_expression,
-            ))),
-            opt(tuple((else_tag, parse_block_expression))),
-        )),
+            )),
+            opt((else_tag, parse_block_expression)),
+        ),
         |(_if, condition, then_block_expr, else_ifs, else_)| {
             if let Expression::BlockExpression(then_block) = then_block_expr {
                 Expression::IfExpression(IfExpr {
@@ -160,18 +168,18 @@ fn parse_if_expression(input: Tokens) -> IResult<Tokens, Expression> {
                 panic!("parse_block_expression parsed something other than a block expression");
             }
         },
-    )(input)
+    ).parse(input)
 }
 
 fn parse_for_expression(input: Tokens) -> IResult<Tokens, Expression> {
     map(
-        tuple((
+        (
             for_tag,
             parse_identifier,
             in_tag,
             parse_expression,
             parse_block_expression,
-        )),
+        ),
         |(_for, lhs, _in, rhs, body)| {
             if let Expression::BlockExpression(body) = body {
                 Expression::ForExpression(ForExpr {
@@ -183,7 +191,8 @@ fn parse_for_expression(input: Tokens) -> IResult<Tokens, Expression> {
                 panic!("parse_block_expression parsed something other than a block expression");
             }
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn empty_boxed_vec(input: Tokens) -> IResult<Tokens, Vec<Expression>> {

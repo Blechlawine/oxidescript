@@ -1,8 +1,10 @@
-use crate::lexer::token::Token;
-use crate::lexer::tokens::Tokens;
 use nom::bytes::complete::take;
 use nom::combinator::verify;
 use nom::IResult;
+use nom::Parser;
+
+use crate::lexer::token::Token;
+use crate::lexer::tokens::Tokens;
 
 use super::ast::{InfixOperator, Precedence};
 
@@ -16,7 +18,7 @@ macro_rules! tag_token (
             // println!("{:?} == {:?}", $tag, &tokens.tokens[0]);
             verify(take1, |t: &Tokens| {
                 t.tokens[0] == $tag
-            })(tokens)
+            }).parse(tokens)
         }
     )
 );

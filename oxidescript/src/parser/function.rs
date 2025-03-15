@@ -2,8 +2,8 @@ use nom::{
     branch::alt,
     combinator::{map, opt},
     multi::{many0, separated_list0},
-    sequence::{delimited, tuple},
-    IResult,
+    sequence::delimited,
+    IResult, Parser,
 };
 
 use crate::lexer::tokens::Tokens;
@@ -19,29 +19,31 @@ use super::{
 };
 
 pub fn parse_parameters(input: Tokens) -> IResult<Tokens, Vec<Parameter>> {
-    separated_list0(comma_tag, parse_parameter)(input)
+    separated_list0(comma_tag, parse_parameter).parse(input)
 }
 
 pub fn parse_parameter(input: Tokens) -> IResult<Tokens, Parameter> {
     map(
-        tuple((parse_identifier, colon_tag, parse_type_expression)),
+        (parse_identifier, colon_tag, parse_type_expression),
         |(name, _, r#type)| Parameter { name, r#type },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_return_expression(input: Tokens) -> IResult<Tokens, Expression> {
     map(
         delimited(return_tag, parse_expression, semicolon_tag),
         |expr| expr,
-    )(input)
+    )
+    .parse(input)
 }
 
 pub fn parse_block(input: Tokens) -> IResult<Tokens, Block> {
     map(
-        tuple((
+        (
             many0(parse_statement),
             opt(alt((parse_return_expression, parse_expression))),
-        )),
+        ),
         |(mut statements, return_value)| {
             // Automatically select last expression statement as return value if no return value exists
             if return_value.is_none() {
@@ -63,5 +65,6 @@ pub fn parse_block(input: Tokens) -> IResult<Tokens, Block> {
                 return_value,
             }
         },
-    )(input)
+    )
+    .parse(input)
 }

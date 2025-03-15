@@ -1,9 +1,9 @@
 use crate::parser::Err;
 use nom::combinator::{map, opt};
 use nom::error::ErrorKind;
-use nom::error_position;
-use nom::sequence::{delimited, tuple};
+use nom::sequence::delimited;
 use nom::{bytes::complete::take, IResult};
+use nom::{error_position, Parser};
 
 use crate::lexer::tokens::Tokens;
 
@@ -86,12 +86,13 @@ fn parse_pratt_member_access_expression(
     input: Tokens,
     left: Expression,
 ) -> IResult<Tokens, Expression> {
-    map(tuple((period_tag, parse_identifier)), |(_, right)| {
+    map((period_tag, parse_identifier), |(_, right)| {
         Expression::MemberAccessExpression(MemberAccessExpr {
             lhs: Box::new(left.clone()),
             ident: right,
         })
-    })(input)
+    })
+    .parse(input)
 }
 
 fn parse_pratt_call_expression(input: Tokens, left: Expression) -> IResult<Tokens, Expression> {
@@ -103,7 +104,8 @@ fn parse_pratt_call_expression(input: Tokens, left: Expression) -> IResult<Token
                 arguments: args.unwrap_or_default(),
             })
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_pratt_index_expression(input: Tokens, left: Expression) -> IResult<Tokens, Expression> {
@@ -115,5 +117,6 @@ fn parse_pratt_index_expression(input: Tokens, left: Expression) -> IResult<Toke
                 index: Box::new(index_expr),
             })
         },
-    )(input)
+    )
+    .parse(input)
 }

@@ -11,6 +11,7 @@ use nom::bytes::complete::take;
 use nom::error::{Error, ErrorKind};
 use nom::multi::many0;
 use nom::Err;
+use nom::Parser as _;
 use nom::{sequence::terminated, IResult};
 
 use crate::lexer::token::Token;
@@ -77,7 +78,7 @@ fn parse_identifier(input: Tokens) -> IResult<Tokens, Identifier> {
 
 fn parse_program(input: Tokens) -> IResult<Tokens, Program> {
     // println!("parse_program");
-    terminated(many0(parse_statement), eof_tag)(input)
+    terminated(many0(parse_statement), eof_tag).parse(input)
 }
 
 pub struct Parser;

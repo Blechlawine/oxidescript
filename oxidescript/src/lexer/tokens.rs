@@ -1,6 +1,6 @@
 use std::iter::Enumerate;
 
-use nom::{InputIter, InputLength, InputTake};
+use nom::Input;
 
 use super::token::Token;
 
@@ -21,16 +21,16 @@ impl<'a> Tokens<'a> {
     }
 }
 
-impl<'a> InputIter for Tokens<'a> {
+impl<'a> Input for Tokens<'a> {
     type Item = &'a Token;
-    type Iter = Enumerate<::std::slice::Iter<'a, Token>>;
-    type IterElem = ::std::slice::Iter<'a, Token>;
+    type Iter = ::std::slice::Iter<'a, Token>;
+    type IterIndices = Enumerate<::std::slice::Iter<'a, Token>>;
 
-    fn iter_indices(&self) -> Self::Iter {
+    fn iter_indices(&self) -> Self::IterIndices {
         self.tokens.iter().enumerate()
     }
 
-    fn iter_elements(&self) -> Self::IterElem {
+    fn iter_elements(&self) -> Self::Iter {
         self.tokens.iter()
     }
 
@@ -50,9 +50,7 @@ impl<'a> InputIter for Tokens<'a> {
             Err(nom::Needed::Unknown)
         }
     }
-}
 
-impl InputTake for Tokens<'_> {
     fn take(&self, count: usize) -> Self {
         Self {
             tokens: &self.tokens[0..count],
@@ -83,10 +81,16 @@ impl InputTake for Tokens<'_> {
             },
         )
     }
-}
 
-impl InputLength for Tokens<'_> {
     fn input_len(&self) -> usize {
         self.tokens.len()
+    }
+
+    fn take_from(&self, index: usize) -> Self {
+        Self {
+            tokens: &self.tokens[index..],
+            start: 0,
+            end: self.tokens.len() - index,
+        }
     }
 }

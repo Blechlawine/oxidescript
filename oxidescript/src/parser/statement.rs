@@ -1,8 +1,7 @@
 use nom::{
     branch::alt,
     combinator::{map, opt},
-    sequence::tuple,
-    IResult,
+    IResult, Parser,
 };
 
 use crate::lexer::tokens::Tokens;
@@ -14,24 +13,26 @@ use super::{
 
 pub fn parse_statement(input: Tokens) -> IResult<Tokens, Statement> {
     // println!("parse_statement");
-    alt((parse_declaration_statement, parse_expression_statement))(input)
+    alt((parse_declaration_statement, parse_expression_statement)).parse(input)
 }
 
 fn parse_declaration_statement(input: Tokens) -> IResult<Tokens, Statement> {
     // println!("parse_declaration_statement");
     map(parse_declaration, |declaration| {
         Statement::DeclarationStatement(declaration)
-    })(input)
+    })
+    .parse(input)
 }
 
 // TODO: do we have expression statements in this language?
 fn parse_expression_statement(input: Tokens) -> IResult<Tokens, Statement> {
     // println!("parse_expression_statement");
     map(
-        tuple((parse_expression, opt(semicolon_tag))),
+        (parse_expression, opt(semicolon_tag)),
         |(expression, semicolon)| Statement::ExpressionStatement {
             expression,
             has_semicolon: semicolon.is_some(),
         },
-    )(input)
+    )
+    .parse(input)
 }
