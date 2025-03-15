@@ -1,5 +1,6 @@
 use crate::parser::ast::{
     Expression, ForExpr, InfixExpr, InfixOperator, Literal, MemberAccessExpr, UnaryExpr,
+    UnaryOperator,
 };
 
 use super::{Check, CheckContext, VariableType};
@@ -35,7 +36,13 @@ impl Check for Literal {
 impl Check for UnaryExpr {
     fn check(&self, ctx: &CheckContext) -> VariableType {
         let rhs_type = self.rhs.check(ctx);
-        todo!("unary infer type")
+        match (&self.op, &rhs_type) {
+            (UnaryOperator::LogicalNot, VariableType::Bool) => VariableType::Bool,
+            (UnaryOperator::BitwiseNot, VariableType::Number) => VariableType::Number,
+            (UnaryOperator::Minus, VariableType::Number) => VariableType::Number,
+            (UnaryOperator::Plus, VariableType::Number) => VariableType::Number,
+            _ => panic!("Invalid operator for type {rhs_type}"),
+        }
     }
 }
 
