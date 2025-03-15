@@ -13,7 +13,7 @@ fn binary_expr<'c>(
     lhs: impl IntoOxc<'c, Expression<'c>>,
     rhs: impl IntoOxc<'c, Expression<'c>>,
     op: BinaryOperator,
-) -> oxc::allocator::Box<BinaryExpression<'c>> {
+) -> oxc::allocator::Box<'c, BinaryExpression<'c>> {
     oxc::allocator::Box::new_in(
         AstBuilder::new(ctx.allocator).binary_expression(
             Span::new(0, 0),
@@ -30,7 +30,7 @@ fn logical_expr<'c>(
     lhs: impl IntoOxc<'c, Expression<'c>>,
     rhs: impl IntoOxc<'c, Expression<'c>>,
     op: LogicalOperator,
-) -> oxc::allocator::Box<LogicalExpression<'c>> {
+) -> oxc::allocator::Box<'c, LogicalExpression<'c>> {
     oxc::allocator::Box::new_in(
         AstBuilder::new(ctx.allocator).logical_expression(
             Span::new(0, 0),

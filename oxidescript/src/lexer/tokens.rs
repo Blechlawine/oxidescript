@@ -52,7 +52,7 @@ impl<'a> InputIter for Tokens<'a> {
     }
 }
 
-impl<'a> InputTake for Tokens<'a> {
+impl InputTake for Tokens<'_> {
     fn take(&self, count: usize) -> Self {
         Self {
             tokens: &self.tokens[0..count],

@@ -42,7 +42,7 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Identifier {
 }
 
 impl<'c> IntoOxc<'c, IdentifierReference<'c>> for oxidescript::parser::ast::Identifier {
-    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> IdentifierReference {
+    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> IdentifierReference<'c> {
         AstBuilder::new(ctx.allocator).identifier_reference(Span::new(0, 0), self.0)
     }
 }

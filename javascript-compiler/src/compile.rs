@@ -24,7 +24,7 @@ pub mod unary;
 use crate::{IntoOxc, JavascriptCompilerContext};
 
 impl<'c> IntoOxc<'c, Program<'c>> for oxidescript::parser::ast::Program {
-    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Program {
+    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Program<'c> {
         AstBuilder::new(ctx.allocator).program(
             Span::new(0, 0),
             SourceType::default(),
@@ -41,7 +41,7 @@ impl<'c> IntoOxc<'c, Program<'c>> for oxidescript::parser::ast::Program {
 }
 
 impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Statement {
-    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Statement {
+    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Statement<'c> {
         match self {
             oxidescript::parser::ast::Statement::ExpressionStatement { expression, .. } => {
                 AstBuilder::new(ctx.allocator)
