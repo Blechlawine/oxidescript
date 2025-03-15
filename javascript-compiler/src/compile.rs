@@ -73,12 +73,29 @@ impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Statement {
                         name,
                         parameters,
                         body,
+                        has_body,
                         ..
-                    }) => oxc::ast::ast::Statement::FunctionDeclaration(ctx.r#box(ctx.function(
-                        name.into_oxc(ctx),
-                        parameters.into_oxc(ctx),
-                        body.into_oxc(ctx),
-                    ))),
+                    }) => {
+                        if has_body {
+                            if let Some(body) = body {
+                                oxc::ast::ast::Statement::FunctionDeclaration(ctx.r#box(
+                                    ctx.function(
+                                        name.into_oxc(ctx),
+                                        parameters.into_oxc(ctx),
+                                        body.into_oxc(ctx),
+                                    ),
+                                ))
+                            } else {
+                                panic!("Function with has_body: true should have a body");
+                            }
+                        } else {
+                            oxc::ast::ast::Statement::EmptyStatement(ctx.r#box(
+                                oxc::ast::ast::EmptyStatement {
+                                    span: Span::new(0, 0),
+                                },
+                            ))
+                        }
+                    }
                     oxidescript::parser::ast::Declaration::StructDeclaration { .. } => {
                         // this is just a type, it doesn't compile to anything in javascript
                         oxc::ast::ast::Statement::EmptyStatement(ctx.r#box(

@@ -160,6 +160,7 @@ fn lex_keyword_or_ident(input: &[u8]) -> IResult<&[u8], Token> {
                 "mod" => Token::Mod,
                 "use" => Token::Use,
                 "pub" => Token::Pub,
+                "extern" => Token::Extern,
                 _ => Token::Ident(syntax.to_string()),
             })
         },

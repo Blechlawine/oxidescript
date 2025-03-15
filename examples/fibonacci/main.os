@@ -6,4 +6,4 @@ fn fibonacci_recursive(n: number) -> number {
     }
 }
 
-console.log(fibonacci_recursive(10))
+console::log(fibonacci_recursive(10))

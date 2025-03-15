@@ -2,7 +2,7 @@ use nom::{
     branch::alt,
     combinator::{map, opt},
     multi::many0,
-    sequence::{terminated, tuple},
+    sequence::terminated,
     IResult, Parser,
 };
 
@@ -23,7 +23,8 @@ pub fn parse_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
     alt((
         parse_let_declaration,
         parse_const_declaration,
-        parse_function_declaration,
+        parse_function_declaration_with_body,
+        parse_function_declaration_without_body,
         parse_struct_declaration,
         parse_mod_declaration,
         parse_use_declaration,
@@ -32,18 +33,18 @@ pub fn parse_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
 }
 
 fn parse_use_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
-    map(parse_use, |r#use| Declaration::UseDeclaration(r#use)).parse(input)
+    map(parse_use, Declaration::UseDeclaration).parse(input)
 }
 
 fn parse_mod_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
-    map(parse_mod, |r#mod| Declaration::ModDeclaration(r#mod)).parse(input)
+    map(parse_mod, Declaration::ModDeclaration).parse(input)
 }
 
 fn parse_const_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
     // println!("parse_const_declaration");
     terminated(
         map(
-            tuple((const_tag, parse_identifier, assign_tag, parse_expression)),
+            (const_tag, parse_identifier, assign_tag, parse_expression),
             |(_, name, _, expression)| {
                 // dbg!(&name, &expression);
                 Declaration::ConstDeclaration(name, expression)
@@ -58,7 +59,7 @@ fn parse_let_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
     // println!("parse_let_declaration");
     terminated(
         map(
-            tuple((let_tag, parse_identifier, assign_tag, parse_expression)),
+            (let_tag, parse_identifier, assign_tag, parse_expression),
             |(_, name, _, expression)| {
                 // dbg!(&name, &expression);
                 Declaration::LetDeclaration(name, expression)
@@ -69,7 +70,33 @@ fn parse_let_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
     .parse(input)
 }
 
-fn parse_function_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
+fn parse_function_declaration_without_body(input: Tokens) -> IResult<Tokens, Declaration> {
+    // println!("parse_function_declaration_without_body {:?}", input);
+    map(
+        (
+            function_tag,
+            parse_identifier,
+            l_paren_tag,
+            parse_parameters,
+            r_paren_tag,
+            opt((minus_tag, greater_than_tag, parse_type_expression)),
+            semicolon_tag,
+        ),
+        |(_, name, _, parameters, _, return_type, _)| {
+            // dbg!(&name, &parameters, &return_type);
+            Declaration::FunctionDeclaration(FunctionDecl {
+                name,
+                parameters,
+                body: None,
+                has_body: false,
+                return_type: return_type.map(|(_, _, rt)| rt),
+            })
+        },
+    )
+    .parse(input)
+}
+
+fn parse_function_declaration_with_body(input: Tokens) -> IResult<Tokens, Declaration> {
     // println!("parse_function_declaration");
     map(
         (
@@ -88,7 +115,8 @@ fn parse_function_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
             Declaration::FunctionDeclaration(FunctionDecl {
                 name,
                 parameters,
-                body,
+                body: Some(body),
+                has_body: true,
                 return_type: return_type.map(|(_, _, rt)| rt),
             })
         },

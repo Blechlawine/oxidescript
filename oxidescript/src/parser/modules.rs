@@ -1,34 +1,46 @@
 use nom::{
+    branch::alt,
     combinator::{map, opt},
-    multi::separated_list1,
+    multi::{many0, separated_list1},
+    sequence::delimited,
     IResult, Parser,
 };
 
-use crate::lexer::tokens::Tokens;
+use crate::lexer::{token::Token, tokens::Tokens};
 
 use super::{
-    ast::{Module, Path, Use},
-    colon_tag, l_squirly_tag, mod_tag, parse_identifier, parse_program, r_squirly_tag,
-    semicolon_tag, use_tag,
+    ast::{Module, Path, Statement, Use},
+    colon_tag, extern_tag, l_squirly_tag, mod_tag, parse_identifier, r_squirly_tag, semicolon_tag,
+    statement::parse_statement,
+    use_tag,
 };
 
 pub fn parse_mod(input: Tokens) -> IResult<Tokens, Module> {
     map(
         (
-            mod_tag,
+            map(alt((mod_tag, extern_tag)), |t| match t.tokens[0] {
+                Token::Mod => false,
+                Token::Extern => true,
+                _ => unreachable!(),
+            }),
             parse_path,
-            opt((l_squirly_tag, parse_program, r_squirly_tag)),
+            opt(delimited(
+                l_squirly_tag,
+                parse_module_content,
+                r_squirly_tag,
+            )),
         ),
-        |(_, path, content)| Module {
+        |(is_extern, path, content)| Module {
             path,
-            content: if let Some((_, content, _)) = content {
-                Some(content)
-            } else {
-                None
-            },
+            content,
+            is_extern,
         },
     )
     .parse(input)
+}
+
+fn parse_module_content(input: Tokens) -> IResult<Tokens, Vec<Statement>> {
+    many0(parse_statement).parse(input)
 }
 
 pub fn parse_use(input: Tokens) -> IResult<Tokens, Use> {

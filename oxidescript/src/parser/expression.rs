@@ -53,7 +53,7 @@ fn parse_literal_expression(input: Tokens) -> IResult<Tokens, Expression> {
 }
 
 fn parse_path_expression(input: Tokens) -> IResult<Tokens, Expression> {
-    map(parse_path, |path| Expression::PathExpression(path)).parse(input)
+    map(parse_path, Expression::PathExpression).parse(input)
 }
 
 fn parse_unary_expression(input: Tokens) -> IResult<Tokens, Expression> {

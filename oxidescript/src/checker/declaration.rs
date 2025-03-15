@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-
 use crate::parser::ast::{Declaration, Parameter, Path, StructDecl, StructField, TypeExpression};
 
 use super::{Check, CheckContext, Resolved, Variable, VariableType};
@@ -45,11 +43,30 @@ impl Check for Declaration {
                         },
                     },
                 );
+                ctx.insert_declaration(
+                    decl.name.clone().into(),
+                    Resolved::Type(VariableType::Function {
+                        parameters: parameter_types.clone(),
+                        return_type: decl
+                            .return_type
+                            .clone()
+                            .map(|rt| Box::new(rt.check(ctx)))
+                            .unwrap_or_default(),
+                    }),
+                );
                 if let Some(explicit_return_type) = &decl.return_type {
                     let explicit_return_type = explicit_return_type.check(ctx);
-                    let inferred_return_type = decl.body.check(ctx);
-                    if explicit_return_type != inferred_return_type {
-                        panic!("Incorrect return type: {inferred_return_type}");
+                    if decl.has_body {
+                        if let Some(body) = &decl.body {
+                            let inferred_return_type = body.check(ctx);
+                            if explicit_return_type != inferred_return_type {
+                                panic!("Incorrect return type: {inferred_return_type}");
+                            } else {
+                                explicit_return_type
+                            }
+                        } else {
+                            panic!("Function with has_body: true should have a body");
+                        }
                     } else {
                         explicit_return_type
                     }

@@ -9,4 +9,3 @@ path = "src/lib.rs"
 
 [dependencies]
 nom = "8"
-serde = { version = "1", features = ["derive"] }

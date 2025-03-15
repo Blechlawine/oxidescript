@@ -7,6 +7,7 @@ pub struct Module {
     pub path: Path,
     /// content is None, when the module is in a different file
     pub content: Option<Program>,
+    pub is_extern: bool,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, PartialOrd, Ord)]
@@ -142,7 +143,9 @@ pub struct FunctionDecl {
     pub name: Identifier,
     pub parameters: Vec<Parameter>,
     pub return_type: Option<TypeExpression>,
-    pub body: Block,
+    pub body: Option<Block>,
+    /// if the function actually has logic defined, or if it is just a declaration (fn(arg: ...);)
+    pub has_body: bool,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]

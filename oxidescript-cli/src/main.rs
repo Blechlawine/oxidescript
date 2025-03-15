@@ -1,4 +1,6 @@
 use std::{
+    cell::RefCell,
+    collections::BTreeMap,
     fs::read_to_string,
     path::{Path, PathBuf},
     process::{exit, Command},
@@ -161,7 +163,10 @@ fn compile_file(path: &Path, ctx: &Context, environment: JavascriptEnvironment) 
         println!("AST: {:#?}", &ast);
     }
 
-    let mut checker_ctx = CheckContext::default();
+    let errors = RefCell::new(vec![]);
+    let resolved = RefCell::new(BTreeMap::new());
+    let mut checker_ctx = CheckContext::new(&errors, &resolved);
+    checker_ctx.init();
     environment.load(&mut checker_ctx);
     ast.check(&checker_ctx);
 

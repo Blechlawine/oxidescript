@@ -1,7 +1,8 @@
-use std::collections::HashMap;
-
-use oxidescript::checker::{CheckContext, Variable};
-use serde::Deserialize;
+use oxidescript::{
+    checker::{Check, CheckContext},
+    lexer::{tokens::Tokens, Lexer},
+    parser::Parser,
+};
 
 use crate::JavascriptRuntime;
 
@@ -33,26 +34,24 @@ impl From<&JavascriptRuntime> for JavascriptEnvironment {
     }
 }
 
-#[derive(Deserialize)]
-struct EnvironmentFile {
-    variables: HashMap<String, Variable>,
-}
-
 impl JavascriptEnvironment {
     pub fn load(&self, ctx: &mut CheckContext) {
         let env_file = match self {
             JavascriptEnvironment::Browser => {
-                include_str!("../environments/browser.toml")
+                include_str!("../environments/browser.d.os")
             }
             JavascriptEnvironment::Bun => {
-                include_str!("../environments/bun.toml")
+                include_str!("../environments/bun.d.os")
             }
             JavascriptEnvironment::Node => {
-                include_str!("../environments/node.toml")
+                include_str!("../environments/node.d.os")
             }
         };
-        let parsed =
-            toml::from_str::<EnvironmentFile>(env_file).expect("Failed to parse environment");
-        ctx.scope.borrow_mut().variables.extend(parsed.variables);
+
+        let (unlexed, tokens) = Lexer::lex_tokens(env_file.as_bytes()).unwrap();
+        assert!(unlexed.is_empty());
+        let (unparsed, ast) = Parser::parse(Tokens::new(&tokens)).unwrap();
+        assert!(unparsed.tokens.is_empty());
+        ast.check(ctx);
     }
 }

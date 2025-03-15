@@ -184,7 +184,7 @@ mod tests {
             Declaration::FunctionDeclaration(FunctionDecl {
                 name: Identifier("test".to_string()),
                 parameters: vec![],
-                body: Block {
+                body: Some(Block {
                     statements: vec![Statement::DeclarationStatement(
                         Declaration::LetDeclaration(
                             Identifier("variable".to_string()),
@@ -195,7 +195,8 @@ mod tests {
                         ),
                     )],
                     return_value: None,
-                },
+                }),
+                has_body: true,
                 return_type: None,
             }),
         )];
@@ -252,7 +253,7 @@ mod tests {
             Declaration::FunctionDeclaration(FunctionDecl {
                 name: Identifier("test".to_string()),
                 parameters: vec![],
-                body: Block {
+                body: Some(Block {
                     statements: vec![],
                     return_value: Some(Expression::InfixExpression(InfixExpr {
                         op: InfixOperator::Minus,
@@ -269,10 +270,11 @@ mod tests {
                             },
                         ))),
                     })),
-                },
+                }),
                 return_type: Some(TypeExpression::Path(Path::from(Identifier(
                     "Number".to_string(),
                 )))),
+                has_body: true,
             }),
         )];
 
@@ -471,7 +473,8 @@ mod tests {
             Statement::DeclarationStatement(Declaration::FunctionDeclaration(FunctionDecl {
                 name: Identifier("test".to_string()),
                 parameters: vec![],
-                body: Block {
+                has_body: true,
+                body: Some(Block {
                     statements: vec![
                         Statement::ExpressionStatement {
                             expression: Expression::InfixExpression(InfixExpr {
@@ -542,7 +545,7 @@ mod tests {
                     return_value: Some(Expression::PathExpression(Path::from(Identifier(
                         "variable".to_string(),
                     )))),
-                },
+                }),
                 return_type: None,
             })),
             Statement::ExpressionStatement {

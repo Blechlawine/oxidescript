@@ -64,4 +64,5 @@ pub enum Token {
     Use,
     Pub,
     Mod,
+    Extern,
 }

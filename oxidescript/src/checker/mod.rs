@@ -4,8 +4,6 @@ use std::{
     fmt::Display,
 };
 
-use serde::Deserialize;
-
 use crate::parser::ast::{Identifier, Path};
 
 pub mod declaration;
@@ -14,10 +12,10 @@ pub mod modules;
 pub mod program;
 
 #[derive(Debug)]
-pub struct CheckContext {
+pub struct CheckContext<'c> {
     pub scope: RefCell<Scope>,
-    errors: RefCell<Vec<CheckError>>,
-    resolved: RefCell<BTreeMap<Path, Resolved>>,
+    errors: &'c RefCell<Vec<CheckError>>,
+    resolved: &'c RefCell<BTreeMap<Path, Resolved>>,
     current_resolved_path: Path,
 }
 
@@ -33,12 +31,12 @@ pub struct Scope {
     local_types: HashMap<String, VariableType>,
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Variable {
     r#type: VariableType,
 }
 
-#[derive(Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub enum VariableType {
     String,
     Number,
@@ -84,28 +82,38 @@ pub trait Check {
     fn check(&self, ctx: &CheckContext) -> VariableType;
 }
 
-impl Default for CheckContext {
-    fn default() -> Self {
-        let mut resolved = BTreeMap::new();
-        resolved.insert(Path::from("String"), Resolved::Type(VariableType::String));
-        resolved.insert(Path::from("number"), Resolved::Type(VariableType::Number));
-        resolved.insert(Path::from("bool"), Resolved::Type(VariableType::Bool));
+impl<'c> CheckContext<'c> {
+    pub fn new(
+        errors: &'c RefCell<Vec<CheckError>>,
+        resolved: &'c RefCell<BTreeMap<Path, Resolved>>,
+    ) -> Self {
         Self {
             scope: RefCell::new(Scope::default()),
-            errors: RefCell::new(vec![]),
-            resolved: RefCell::new(resolved),
+            errors,
+            resolved,
             current_resolved_path: Path::from(Identifier("crate".to_string())),
         }
     }
-}
 
-impl CheckContext {
+    pub fn init(&self) {
+        self.resolved
+            .borrow_mut()
+            .insert(Path::from("String"), Resolved::Type(VariableType::String));
+        self.resolved
+            .borrow_mut()
+            .insert(Path::from("number"), Resolved::Type(VariableType::Number));
+        self.resolved
+            .borrow_mut()
+            .insert(Path::from("bool"), Resolved::Type(VariableType::Bool));
+    }
+
     pub fn resolve(&self, path: &Path) -> Option<Resolved> {
         self.resolved.borrow().get(path).cloned()
     }
 
     /// resolve a variable path in the current scope
     pub fn resolve_variable(&self, variable_path: &Path) -> Variable {
+        // dbg!(&variable_path);
         if variable_path.len() == 1 {
             // the path is only the identifier, so we should resolve from scope
             let ident = variable_path.elements.first().unwrap();
@@ -116,31 +124,43 @@ impl CheckContext {
                 .unwrap_or_else(|| panic!("Couldn't find variable {} in scope", ident.0))
                 .clone()
         } else {
+            // dbg!(&self.resolved);
             // the path is not just an identifier, so we should resolve from resolved
-            todo!()
+            let resolved = self.resolved.borrow().get(variable_path).cloned();
+            if let Some(Resolved::Type(resolved)) = resolved {
+                Variable { r#type: resolved }
+            } else {
+                todo!("path resolves to module");
+            }
         }
     }
 
     /// inserts a type into resolved at the current path
     pub fn insert_declaration(&self, name: Path, insert: Resolved) {
         let path = self.current_resolved_path.join(&name);
-        for i in 0..path.len() - 1 {
-            let (parts, rest) = path.elements.split_at(i);
-            let resolved = self.resolved.borrow();
-            let existing = resolved.get(&Path {
-                elements: parts.to_vec(),
-            });
+        for i in 0..path.len() {
+            let (parts, rest) = path.elements.split_at(i + 1);
+            let existing = {
+                let resolved = self.resolved.borrow();
+                resolved
+                    .get(&Path {
+                        elements: parts.to_vec(),
+                    })
+                    .cloned()
+            };
             let is_last_element = rest.is_empty();
             if let Some(existing) = existing {
-                if is_last_element && *existing != insert {
+                if is_last_element && existing != insert {
                     panic!("Can't overwrite existing type at path: {}", path)
                 }
             } else if is_last_element {
+                // println!("inserting type, {:?}", &path);
                 self.resolved
                     .borrow_mut()
                     .insert(path.clone(), insert.clone());
                 break;
             } else {
+                // println!("inserting module, {:?}", &parts);
                 self.resolved.borrow_mut().insert(
                     Path {
                         elements: parts.to_vec(),
@@ -154,6 +174,8 @@ impl CheckContext {
 
 #[cfg(test)]
 mod tests {
+    use std::{cell::RefCell, collections::BTreeMap};
+
     use crate::{
         checker::{Variable, VariableType},
         lexer::{tokens::Tokens, Lexer},
@@ -168,7 +190,10 @@ mod tests {
         let (_, r) = Lexer::lex_tokens(input).unwrap();
         let tokens = Tokens::new(&r);
         let (_, result) = Parser::parse(tokens).unwrap();
-        let check_ctx = CheckContext::default();
+        let errors = RefCell::new(vec![]);
+        let resolved = RefCell::new(BTreeMap::new());
+        let check_ctx = CheckContext::new(&errors, &resolved);
+        check_ctx.init();
         let inferred = result.check(&check_ctx);
         assert_eq!(inferred, VariableType::Void);
         assert_eq!(

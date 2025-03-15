@@ -1,3 +1,3 @@
 for test in ["foo", "bar"] {
-    console.log(test);
+    console::log(test);
 }

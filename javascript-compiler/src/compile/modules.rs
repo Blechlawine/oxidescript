@@ -22,7 +22,7 @@ impl<'c> IntoOxc<'c, Expression<'c>> for Path {
                     acc
                 });
             ctx.imports.borrow_mut().push(ctx.import(import_path));
-            todo!()
+            todo!("compile imports from modules");
         }
     }
 }

@@ -35,6 +35,7 @@ tag_token!(in_tag, Token::In);
 tag_token!(mod_tag, Token::Mod);
 tag_token!(use_tag, Token::Use);
 tag_token!(pub_tag, Token::Pub);
+tag_token!(extern_tag, Token::Extern);
 
 tag_token!(assign_tag, Token::Assign);
 tag_token!(plus_tag, Token::Plus);
