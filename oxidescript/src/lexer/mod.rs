@@ -102,8 +102,6 @@ pub fn lex_punctuation(input: &[u8]) -> IResult<&[u8], Token> {
     ))(input)
 }
 
-// Strings
-// TODO: understand
 fn parse_inside_string(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
     let (rest1, found1) = take(1usize)(input)?;
     match found1.as_bytes() {
