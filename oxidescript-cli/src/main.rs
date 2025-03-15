@@ -5,6 +5,7 @@ use std::{
 };
 
 use clap::Parser as ClapParser;
+use environment::JavascriptEnvironment;
 use oxidescript::{
     checker::{Check, CheckContext},
     compiler::Compiler,
@@ -12,6 +13,8 @@ use oxidescript::{
     parser::Parser,
 };
 use oxidescript_javascript_compiler::JavascriptCompiler;
+
+mod environment;
 
 #[derive(clap::Parser, Debug)]
 #[command(version)]
@@ -30,6 +33,9 @@ struct Args {
 enum OxideCommand {
     /// Compile files
     Compile {
+        #[arg(short, long)]
+        environment: Option<JavascriptEnvironment>,
+
         #[arg(short, long)]
         outdir: Option<PathBuf>,
     },
@@ -83,7 +89,10 @@ fn main() {
     };
 
     match args.command {
-        OxideCommand::Compile { outdir } => {
+        OxideCommand::Compile {
+            environment,
+            outdir,
+        } => {
             let outdir = if let Some(outdir) = outdir {
                 if outdir.is_dir() {
                     if let Ok(read_dir) = outdir.read_dir() {
@@ -111,7 +120,7 @@ fn main() {
                 PathBuf::from(".")
             };
 
-            let compiled = compile_file(&args.input, &ctx);
+            let compiled = compile_file(&args.input, &ctx, environment.unwrap_or_default());
             let new_file_name = format!("{}.js", args.input.file_stem().unwrap().to_str().unwrap());
             let compiled_path = outdir.join(new_file_name);
             std::fs::write(compiled_path, compiled).unwrap();
@@ -124,7 +133,7 @@ fn main() {
             std::fs::create_dir_all(devdir).unwrap();
             let with = with.unwrap_or_default();
 
-            let compiled = compile_file(&args.input, &ctx);
+            let compiled = compile_file(&args.input, &ctx, JavascriptEnvironment::from(&with));
             let new_file_name = format!("{}.js", args.input.file_stem().unwrap().to_str().unwrap());
             let compiled_path = devdir.join(new_file_name);
             std::fs::write(&compiled_path, compiled).unwrap();
@@ -134,7 +143,7 @@ fn main() {
     }
 }
 
-fn compile_file(path: &Path, ctx: &Context) -> String {
+fn compile_file(path: &Path, ctx: &Context, environment: JavascriptEnvironment) -> String {
     let loaded_file = load_file(path);
     if ctx.verbose {
         println!("Loaded file: {:?}", &loaded_file);
@@ -152,7 +161,8 @@ fn compile_file(path: &Path, ctx: &Context) -> String {
         println!("AST: {:#?}", &ast);
     }
 
-    let checker_ctx = CheckContext::default();
+    let mut checker_ctx = CheckContext::default();
+    environment.load(&mut checker_ctx);
     ast.check(&checker_ctx);
 
     let compiler = JavascriptCompiler::new();

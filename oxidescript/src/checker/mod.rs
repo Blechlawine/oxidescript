@@ -1,27 +1,29 @@
 use std::{cell::RefCell, collections::HashMap, fmt::Display};
 
+use serde::Deserialize;
+
 pub mod declaration;
 pub mod expression;
 pub mod program;
 
 #[derive(Debug)]
 pub struct CheckContext {
-    scope: RefCell<Scope>,
+    pub scope: RefCell<Scope>,
     errors: RefCell<Vec<CheckError>>,
 }
 
 #[derive(Debug)]
 pub struct Scope {
-    variables: HashMap<String, Variable>,
+    pub variables: HashMap<String, Variable>,
     types: HashMap<String, VariableType>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct Variable {
     r#type: VariableType,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 pub enum VariableType {
     String,
     Number,

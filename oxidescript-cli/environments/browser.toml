@@ -1,0 +1,2 @@
+[variables.console.type.Struct.fields]
+log = { Function = { parameters = ["String"], return_type = "Void" } }
