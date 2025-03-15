@@ -1,7 +1,5 @@
 use std::{fmt::Display, num::ParseFloatError};
 
-use crate::checker::VariableType;
-
 pub type Program = Vec<Statement>;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -71,12 +69,15 @@ pub struct InfixExpr {
 pub enum Declaration {
     ConstDeclaration(Identifier, Expression),
     LetDeclaration(Identifier, Expression),
-    FunctionDeclaration {
-        name: Identifier,
-        parameters: Vec<Parameter>,
-        body: Block,
-    },
+    FunctionDeclaration(FunctionDecl),
     StructDeclaration(StructDecl),
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct FunctionDecl {
+    pub name: Identifier,
+    pub parameters: Vec<Parameter>,
+    pub body: Block,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]

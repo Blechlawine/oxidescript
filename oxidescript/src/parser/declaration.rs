@@ -9,7 +9,7 @@ use nom::{
 use crate::lexer::tokens::Tokens;
 
 use super::{
-    ast::{Declaration, StructDecl, StructField},
+    ast::{Declaration, FunctionDecl, StructDecl, StructField},
     atoms::*,
     expression::parse_expression,
     function::{parse_block, parse_parameters},
@@ -73,11 +73,11 @@ fn parse_function_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
         ),
         |(_, name, _, parameters, _, _, body, _)| {
             // dbg!(&name, &parameters, &body);
-            Declaration::FunctionDeclaration {
+            Declaration::FunctionDeclaration(FunctionDecl {
                 name,
                 parameters,
                 body,
-            }
+            })
         },
     )
     .parse(input)

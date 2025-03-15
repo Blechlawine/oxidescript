@@ -92,8 +92,8 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use ast::{
-        CallExpr, ElseIfExpr, IfExpr, IndexExpr, InfixExpr, MemberAccessExpr, StructDecl,
-        StructField, TypeExpression,
+        CallExpr, ElseIfExpr, FunctionDecl, IfExpr, IndexExpr, InfixExpr, MemberAccessExpr,
+        StructDecl, StructField, TypeExpression,
     };
 
     use super::{
@@ -180,7 +180,7 @@ mod tests {
         .as_bytes();
 
         let program: Program = vec![Statement::DeclarationStatement(
-            Declaration::FunctionDeclaration {
+            Declaration::FunctionDeclaration(FunctionDecl {
                 name: Identifier("test".to_string()),
                 parameters: vec![],
                 body: Block {
@@ -195,7 +195,7 @@ mod tests {
                     )],
                     return_value: None,
                 },
-            },
+            }),
         )];
 
         assert_input_with_program(input, program);
@@ -247,7 +247,7 @@ mod tests {
         "
         .as_bytes();
         let program: Program = vec![Statement::DeclarationStatement(
-            Declaration::FunctionDeclaration {
+            Declaration::FunctionDeclaration(FunctionDecl {
                 name: Identifier("test".to_string()),
                 parameters: vec![],
                 body: Block {
@@ -268,7 +268,7 @@ mod tests {
                         ))),
                     })),
                 },
-            },
+            }),
         )];
 
         assert_input_with_program(input, program);
@@ -463,7 +463,7 @@ mod tests {
         "#;
 
         let program: Program = vec![
-            Statement::DeclarationStatement(Declaration::FunctionDeclaration {
+            Statement::DeclarationStatement(Declaration::FunctionDeclaration(FunctionDecl {
                 name: Identifier("test".to_string()),
                 parameters: vec![],
                 body: Block {
@@ -538,7 +538,7 @@ mod tests {
                         "variable".to_string(),
                     ))),
                 },
-            }),
+            })),
             Statement::ExpressionStatement {
                 expression: Expression::CallExpression(CallExpr {
                     lhs: Box::new(Expression::IdentifierExpression(Identifier(

@@ -19,11 +19,7 @@ impl Check for Declaration {
                     .insert(identifier.0.clone(), expression.check(ctx));
                 VariableType::Void
             }
-            Declaration::FunctionDeclaration {
-                name,
-                parameters,
-                body,
-            } => todo!("function type check"),
+            Declaration::FunctionDeclaration(decl) => todo!("function type check"),
             Declaration::StructDeclaration(decl) => decl.check(ctx),
         }
     }

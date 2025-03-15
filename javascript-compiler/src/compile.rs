@@ -5,6 +5,7 @@ use oxc::{
     },
     span::{SourceType, Span},
 };
+use oxidescript::parser::ast::FunctionDecl;
 
 pub mod block;
 pub mod conditional;
@@ -67,11 +68,11 @@ impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Statement {
                             ctx.allocator,
                         ))
                     }
-                    oxidescript::parser::ast::Declaration::FunctionDeclaration {
+                    oxidescript::parser::ast::Declaration::FunctionDeclaration(FunctionDecl {
                         name,
                         parameters,
                         body,
-                    } => oxc::ast::ast::Statement::FunctionDeclaration(ctx.r#box(ctx.function(
+                    }) => oxc::ast::ast::Statement::FunctionDeclaration(ctx.r#box(ctx.function(
                         name.into_oxc(ctx),
                         parameters.into_oxc(ctx),
                         body.into_oxc(ctx),
