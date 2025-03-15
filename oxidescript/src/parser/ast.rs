@@ -19,7 +19,7 @@ pub enum Expression {
     InfixExpression(InfixExpr),
     ArrayExpression(Vec<Expression>),
     IfExpression(IfExpr),
-    ForExpression(ForExpr), // TODO
+    ForExpression(ForExpr),
     // MatchExpression(MatchExpr), // TODO
     BlockExpression(Box<Block>),
     CallExpression(CallExpr),
