@@ -76,6 +76,14 @@ impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Statement {
                         parameters.into_oxc(ctx),
                         body.into_oxc(ctx),
                     ))),
+                    oxidescript::parser::ast::Declaration::StructDeclaration { .. } => {
+                        // this is just a type, it doesn't compile to anything
+                        oxc::ast::ast::Statement::EmptyStatement(ctx.r#box(
+                            oxc::ast::ast::EmptyStatement {
+                                span: Span::new(0, 0),
+                            },
+                        ))
+                    }
                 }
             }
         }

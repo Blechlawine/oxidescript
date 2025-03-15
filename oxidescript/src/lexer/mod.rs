@@ -149,7 +149,7 @@ fn lex_keyword_or_ident(input: &[u8]) -> IResult<&[u8], Token> {
                 "continue" => Token::Continue,
                 "true" => Token::BooleanLiteral(true),
                 "false" => Token::BooleanLiteral(false),
-                // "struct" => Token::Struct,
+                "struct" => Token::Struct,
                 // "enum" => Token::Enum,
                 // "type" => Token::Type,
                 // "trait" => Token::Trait,

@@ -74,6 +74,21 @@ pub enum Declaration {
         parameters: Vec<Parameter>,
         body: Block,
     },
+    StructDeclaration {
+        ident: Identifier,
+        fields: Vec<StructField>,
+    },
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct StructField {
+    pub ident: Identifier,
+    pub r#type: TypeExpression,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum TypeExpression {
+    Ident(Identifier),
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]

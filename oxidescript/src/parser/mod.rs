@@ -5,6 +5,7 @@ pub mod expression;
 pub mod function;
 pub mod pratt_expression;
 pub mod statement;
+pub mod r#type;
 
 use nom::bytes::complete::take;
 use nom::error::{Error, ErrorKind};
@@ -89,7 +90,10 @@ impl Parser {
 
 #[cfg(test)]
 mod tests {
-    use ast::{CallExpr, ElseIfExpr, IfExpr, IndexExpr, InfixExpr, MemberAccessExpr};
+    use ast::{
+        CallExpr, ElseIfExpr, IfExpr, IndexExpr, InfixExpr, MemberAccessExpr, StructField,
+        TypeExpression,
+    };
 
     use super::{
         ast::{Block, Declaration, Expression, InfixOperator, Statement},
@@ -573,6 +577,30 @@ mod tests {
             },
         ];
 
+        assert_input_with_program(input.as_bytes(), program);
+    }
+
+    #[test]
+    fn struct_declaration() {
+        let input = r#"struct Test {
+            foo: String,
+            bar: Number,
+        }"#;
+        let program: Program = vec![Statement::DeclarationStatement(
+            Declaration::StructDeclaration {
+                ident: Identifier("Test".to_string()),
+                fields: vec![
+                    StructField {
+                        ident: Identifier("foo".to_string()),
+                        r#type: TypeExpression::Ident(Identifier("String".to_string())),
+                    },
+                    StructField {
+                        ident: Identifier("bar".to_string()),
+                        r#type: TypeExpression::Ident(Identifier("Number".to_string())),
+                    },
+                ],
+            },
+        )];
         assert_input_with_program(input.as_bytes(), program);
     }
 }
