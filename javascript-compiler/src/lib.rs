@@ -3,6 +3,7 @@ use oxc_codegen::Codegen;
 use oxidescript::compiler::Compiler;
 
 mod compile;
+mod js;
 
 pub struct JavascriptCompiler {
     allocator: Allocator,

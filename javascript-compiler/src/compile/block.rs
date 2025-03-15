@@ -11,20 +11,12 @@ use oxc::{
 
 use crate::{IntoOxc, JavascriptCompilerContext};
 
-impl<'c> IntoOxc<'c, oxc::allocator::Box<'c, FunctionBody<'c>>>
-    for oxidescript::parser::ast::Block
-{
-    fn into_oxc(
-        self,
-        ctx: &'c JavascriptCompilerContext<'c>,
-    ) -> oxc::allocator::Box<'c, FunctionBody<'c>> {
-        oxc::allocator::Box::new_in(
-            AstBuilder::new(ctx.allocator).function_body(
-                Span::new(0, 0),
-                oxc::allocator::Vec::new_in(ctx.allocator),
-                self.into_oxc(ctx),
-            ),
-            ctx.allocator,
+impl<'c> IntoOxc<'c, FunctionBody<'c>> for oxidescript::parser::ast::Block {
+    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> FunctionBody<'c> {
+        AstBuilder::new(ctx.allocator).function_body(
+            Span::new(0, 0),
+            oxc::allocator::Vec::new_in(ctx.allocator),
+            self.into_oxc(ctx),
         )
     }
 }
@@ -64,7 +56,7 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Block {
                 None::<BindingRestElement>,
             ),
             None::<TSTypeAnnotation>,
-            <Self as IntoOxc<oxc::allocator::Box<FunctionBody>>>::into_oxc(self, ctx),
+            ctx.r#box(self.into_oxc(ctx)),
         );
         AstBuilder::new(ctx.allocator).expression_call(
             Span::new(0, 0),
@@ -73,5 +65,11 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Block {
             oxc::allocator::Vec::new_in(ctx.allocator),
             false,
         )
+    }
+}
+
+impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Block {
+    fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Statement<'c> {
+        AstBuilder::new(ctx.allocator).statement_block(Span::new(0, 0), self.into_oxc(ctx))
     }
 }

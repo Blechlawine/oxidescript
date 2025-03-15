@@ -1,10 +1,6 @@
 use oxc::{
     ast::{
-        ast::{
-            Argument, ArrayExpressionElement, BindingRestElement, Expression, Program, Statement,
-            TSTypeAnnotation, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
-            VariableDeclarator,
-        },
+        ast::{Argument, ArrayExpressionElement, Expression, Program, Statement},
         AstBuilder,
     },
     span::{SourceType, Span},
@@ -44,48 +40,30 @@ impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Statement {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Statement<'c> {
         match self {
             oxidescript::parser::ast::Statement::ExpressionStatement { expression, .. } => {
-                AstBuilder::new(ctx.allocator)
-                    .statement_expression(Span::new(0, 0), expression.into_oxc(ctx))
+                match expression {
+                    oxidescript::parser::ast::Expression::IfExpression(if_expr) => {
+                        if_expr.into_oxc(ctx)
+                    }
+                    oxidescript::parser::ast::Expression::ForExpression(for_expr) => {
+                        for_expr.into_oxc(ctx)
+                    }
+                    oxidescript::parser::ast::Expression::BlockExpression(block) => {
+                        block.into_oxc(ctx)
+                    }
+                    _ => ctx.statement_expr(expression.into_oxc(ctx)),
+                }
             }
             oxidescript::parser::ast::Statement::DeclarationStatement(declaration) => {
                 match declaration {
                     oxidescript::parser::ast::Declaration::ConstDeclaration(ident, expr) => {
                         oxc::ast::ast::Statement::VariableDeclaration(oxc::allocator::Box::new_in(
-                            AstBuilder::new(ctx.allocator).variable_declaration(
-                                Span::new(0, 0),
-                                oxc::ast::ast::VariableDeclarationKind::Const,
-                                oxc::allocator::Vec::from_iter_in(
-                                    vec![VariableDeclarator {
-                                        span: Span::new(0, 0),
-                                        kind: oxc::ast::ast::VariableDeclarationKind::Const,
-                                        id: ident.into_oxc(ctx),
-                                        init: Some(expr.into_oxc(ctx)),
-                                        definite: false,
-                                    }],
-                                    ctx.allocator,
-                                ),
-                                false,
-                            ),
+                            ctx.r#const(ident.into_oxc(ctx), Some(expr.into_oxc(ctx))),
                             ctx.allocator,
                         ))
                     }
                     oxidescript::parser::ast::Declaration::LetDeclaration(ident, expr) => {
                         oxc::ast::ast::Statement::VariableDeclaration(oxc::allocator::Box::new_in(
-                            AstBuilder::new(ctx.allocator).variable_declaration(
-                                Span::new(0, 0),
-                                oxc::ast::ast::VariableDeclarationKind::Let,
-                                oxc::allocator::Vec::from_iter_in(
-                                    vec![VariableDeclarator {
-                                        span: Span::new(0, 0),
-                                        kind: oxc::ast::ast::VariableDeclarationKind::Let,
-                                        id: ident.into_oxc(ctx),
-                                        init: Some(expr.into_oxc(ctx)),
-                                        definite: false,
-                                    }],
-                                    ctx.allocator,
-                                ),
-                                false,
-                            ),
+                            ctx.r#let(ident.into_oxc(ctx), Some(expr.into_oxc(ctx))),
                             ctx.allocator,
                         ))
                     }
@@ -93,28 +71,11 @@ impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Statement {
                         name,
                         parameters,
                         body,
-                    } => {
-                        oxc::ast::ast::Statement::FunctionDeclaration(oxc::allocator::Box::new_in(
-                            oxc::ast::ast::Function {
-                                r#type: oxc::ast::ast::FunctionType::FunctionDeclaration,
-                                span: Span::new(0, 0),
-                                id: Some(name.into_oxc(ctx)),
-                                generator: false,
-                                r#async: false,
-                                declare: false,
-                                type_parameters: None,
-                                this_param: None,
-                                params: oxc::allocator::Box::new_in(
-                                    parameters.into_oxc(ctx),
-                                    ctx.allocator,
-                                ),
-                                body: Some(body.into_oxc(ctx)),
-                                return_type: None,
-                                scope_id: None.into(),
-                            },
-                            ctx.allocator,
-                        ))
-                    }
+                    } => oxc::ast::ast::Statement::FunctionDeclaration(ctx.r#box(ctx.function(
+                        name.into_oxc(ctx),
+                        parameters.into_oxc(ctx),
+                        body.into_oxc(ctx),
+                    ))),
                 }
             }
         }
@@ -170,34 +131,4 @@ impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, Argument<'c>>>
         AstBuilder::new(ctx.allocator)
             .vec_from_iter(self.into_iter().map(|expr| expr.into_oxc(ctx).into()))
     }
-}
-
-pub fn iife<'c>(
-    body: oxc::allocator::Vec<'c, Statement<'c>>,
-    ctx: &'c JavascriptCompilerContext<'c>,
-) -> Expression<'c> {
-    AstBuilder::new(ctx.allocator).expression_call(
-        Span::new(0, 0),
-        AstBuilder::new(ctx.allocator).expression_arrow_function(
-            Span::new(0, 0),
-            false,
-            false,
-            None::<TSTypeParameterDeclaration>,
-            AstBuilder::new(ctx.allocator).formal_parameters(
-                Span::new(0, 0),
-                oxc::ast::ast::FormalParameterKind::FormalParameter,
-                oxc::allocator::Vec::new_in(ctx.allocator),
-                None::<BindingRestElement>,
-            ),
-            None::<TSTypeAnnotation>,
-            AstBuilder::new(ctx.allocator).function_body(
-                Span::new(0, 0),
-                oxc::allocator::Vec::new_in(ctx.allocator),
-                body,
-            ),
-        ),
-        None::<TSTypeParameterInstantiation>,
-        oxc::allocator::Vec::new_in(ctx.allocator),
-        false,
-    )
 }

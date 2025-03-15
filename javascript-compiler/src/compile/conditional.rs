@@ -8,14 +8,12 @@ use oxc::{
 
 use crate::{IntoOxc, JavascriptCompilerContext};
 
-use super::iife;
-
 impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::IfExpr {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
-        iife(
-            oxc::allocator::Vec::from_iter_in([self.into_oxc(ctx)], ctx.allocator),
-            ctx,
-        )
+        ctx.iife(oxc::allocator::Vec::from_iter_in(
+            [self.into_oxc(ctx)],
+            ctx.allocator,
+        ))
     }
 }
 
