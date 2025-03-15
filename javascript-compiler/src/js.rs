@@ -4,8 +4,9 @@ use oxc::{
         ast::{
             Argument, ArrayExpressionElement, BindingIdentifier, BindingPattern,
             BindingRestElement, Expression, ForStatementLeft, FormalParameters, Function,
-            FunctionBody, IdentifierName, Statement, TSTypeAnnotation, TSTypeParameterDeclaration,
-            TSTypeParameterInstantiation, VariableDeclaration, VariableDeclarationKind,
+            FunctionBody, IdentifierName, ImportDeclaration, ImportOrExportKind, Statement,
+            TSTypeAnnotation, TSTypeParameterDeclaration, TSTypeParameterInstantiation,
+            VariableDeclaration, VariableDeclarationKind, WithClause,
         },
         AstBuilder,
     },
@@ -13,6 +14,17 @@ use oxc::{
 };
 
 impl<'c> JavascriptCompilerContext<'c> {
+    pub fn import(&self, path: String) -> ImportDeclaration<'c> {
+        AstBuilder::new(self.allocator).import_declaration(
+            Span::new(0, 0),
+            None, // TODO: this should probably not be None
+            AstBuilder::new(self.allocator).string_literal(Span::new(0, 0), path, None),
+            None,
+            None::<oxc::allocator::Box<'c, WithClause<'c>>>,
+            ImportOrExportKind::Value,
+        )
+    }
+
     pub fn iife(&self, body: oxc::allocator::Vec<'c, Statement<'c>>) -> Expression<'c> {
         self.expr_call(
             self.arrow_function(

@@ -12,6 +12,7 @@ use crate::lexer::tokens::Tokens;
 
 use super::ast::{ElseIfExpr, ForExpr, IfExpr, Precedence, UnaryExpr, UnaryOperator};
 use super::function::parse_block;
+use super::modules::parse_path;
 use super::pratt_expression::parse_pratt_expression;
 use super::{ast::Expression, atoms::*, parse_identifier, parse_literal};
 
@@ -33,7 +34,7 @@ pub fn parse_expressions(input: Tokens) -> IResult<Tokens, Vec<Expression>> {
 pub fn parse_atom_expression(input: Tokens) -> IResult<Tokens, Expression> {
     alt((
         parse_literal_expression,
-        parse_identifier_expression,
+        parse_path_expression,
         parse_unary_expression,
         parse_paren_expression,
         parse_array_expression,
@@ -51,11 +52,8 @@ fn parse_literal_expression(input: Tokens) -> IResult<Tokens, Expression> {
     .parse(input)
 }
 
-fn parse_identifier_expression(input: Tokens) -> IResult<Tokens, Expression> {
-    map(parse_identifier, |identifier| {
-        Expression::IdentifierExpression(identifier)
-    })
-    .parse(input)
+fn parse_path_expression(input: Tokens) -> IResult<Tokens, Expression> {
+    map(parse_path, |path| Expression::PathExpression(path)).parse(input)
 }
 
 fn parse_unary_expression(input: Tokens) -> IResult<Tokens, Expression> {

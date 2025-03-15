@@ -8,9 +8,7 @@ use super::{Check, CheckContext, VariableType};
 impl Check for Expression {
     fn check(&self, ctx: &CheckContext) -> VariableType {
         match self {
-            Expression::IdentifierExpression(identifier) => {
-                ctx.resolve_variable(&identifier.0).r#type
-            }
+            Expression::PathExpression(path) => ctx.resolve_variable(path).r#type,
             Expression::LiteralExpression(literal) => literal.check(ctx),
             Expression::UnaryExpression(unary_expr) => unary_expr.check(ctx),
             Expression::InfixExpression(infix_expr) => infix_expr.check(ctx),

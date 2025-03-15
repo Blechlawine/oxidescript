@@ -6,13 +6,14 @@ use nom::{
     IResult, Parser,
 };
 
-use crate::{checker::VariableType, lexer::tokens::Tokens};
+use crate::lexer::tokens::Tokens;
 
 use super::{
     ast::{Declaration, FunctionDecl, StructDecl, StructField},
     atoms::*,
     expression::parse_expression,
     function::{parse_block, parse_parameters},
+    modules::{parse_mod, parse_use},
     parse_identifier,
     r#type::parse_type_expression,
 };
@@ -24,8 +25,18 @@ pub fn parse_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
         parse_const_declaration,
         parse_function_declaration,
         parse_struct_declaration,
+        parse_mod_declaration,
+        parse_use_declaration,
     ))
     .parse(input)
+}
+
+fn parse_use_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
+    map(parse_use, |r#use| Declaration::UseDeclaration(r#use)).parse(input)
+}
+
+fn parse_mod_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
+    map(parse_mod, |r#mod| Declaration::ModDeclaration(r#mod)).parse(input)
 }
 
 fn parse_const_declaration(input: Tokens) -> IResult<Tokens, Declaration> {

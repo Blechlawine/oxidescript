@@ -1,6 +1,8 @@
-use crate::parser::ast::{Declaration, Parameter, StructDecl, StructField, TypeExpression};
+use std::borrow::Borrow;
 
-use super::{Check, CheckContext, Variable, VariableType};
+use crate::parser::ast::{Declaration, Parameter, Path, StructDecl, StructField, TypeExpression};
+
+use super::{Check, CheckContext, Resolved, Variable, VariableType};
 
 impl Check for Declaration {
     fn check(&self, ctx: &CheckContext) -> VariableType {
@@ -60,6 +62,8 @@ impl Check for Declaration {
                 }
             }
             Declaration::StructDeclaration(decl) => decl.check(ctx),
+            Declaration::ModDeclaration(decl) => decl.check(ctx),
+            Declaration::UseDeclaration(decl) => decl.check(ctx),
         }
     }
 }
@@ -79,15 +83,15 @@ impl Check for Parameter {
 
 impl Check for StructDecl {
     fn check(&self, ctx: &CheckContext) -> VariableType {
-        ctx.scope.borrow_mut().types.insert(
-            self.ident.0.clone(),
-            VariableType::Struct {
+        ctx.insert_declaration(
+            Path::from(self.ident.clone()),
+            Resolved::Type(VariableType::Struct {
                 fields: self
                     .fields
                     .iter()
                     .map(|f| (f.ident.0.clone(), f.check(ctx)))
                     .collect(),
-            },
+            }),
         );
         VariableType::Void
     }
@@ -103,7 +107,16 @@ impl Check for StructField {
 impl Check for TypeExpression {
     fn check(&self, ctx: &CheckContext) -> VariableType {
         match self {
-            TypeExpression::Ident(identifier) => ctx.resolve_type(&identifier.0),
+            TypeExpression::Path(path) => {
+                let resolved = ctx
+                    .resolve(path)
+                    .unwrap_or_else(|| panic!("Can't resolve type {path}"));
+                if let Resolved::Type(r#type) = resolved {
+                    r#type
+                } else {
+                    panic!("Can't resolve a module as a type");
+                }
+            }
         }
     }
 }

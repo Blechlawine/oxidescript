@@ -3,6 +3,68 @@ use std::{fmt::Display, num::ParseFloatError};
 pub type Program = Vec<Statement>;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
+pub struct Module {
+    pub path: Path,
+    /// content is None, when the module is in a different file
+    pub content: Option<Program>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, PartialOrd, Ord)]
+pub struct Path {
+    pub elements: Vec<Identifier>,
+}
+
+impl Path {
+    pub fn len(&self) -> usize {
+        self.elements.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.elements.is_empty()
+    }
+
+    pub fn join(&self, other: &Path) -> Path {
+        let mut elements = self.elements.clone();
+        elements.extend(other.elements.clone());
+        Path { elements }
+    }
+}
+
+impl Display for Path {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for element in &self.elements {
+            f.write_str("::")?;
+            f.write_str(&element.0)?;
+        }
+        Ok(())
+    }
+}
+
+impl<T> From<T> for Path
+where
+    T: Into<String>,
+{
+    fn from(value: T) -> Self {
+        Self {
+            elements: vec![Identifier(value.into())],
+        }
+    }
+}
+
+impl From<Identifier> for Path {
+    fn from(value: Identifier) -> Self {
+        Self {
+            elements: vec![value],
+        }
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct Use {
+    pub path: Path,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Statement {
     ExpressionStatement {
         expression: Expression,
@@ -13,7 +75,7 @@ pub enum Statement {
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Expression {
-    IdentifierExpression(Identifier),
+    PathExpression(Path),
     LiteralExpression(Literal),
     UnaryExpression(UnaryExpr),
     InfixExpression(InfixExpr),
@@ -71,6 +133,8 @@ pub enum Declaration {
     LetDeclaration(Identifier, Expression),
     FunctionDeclaration(FunctionDecl),
     StructDeclaration(StructDecl),
+    ModDeclaration(Module),
+    UseDeclaration(Use),
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -95,7 +159,7 @@ pub struct StructField {
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum TypeExpression {
-    Ident(Identifier),
+    Path(Path),
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -222,7 +286,7 @@ impl Display for InfixOperator {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, PartialOrd, Ord)]
 pub struct Identifier(pub String);
 
 #[derive(Clone, Eq, PartialEq, Debug, PartialOrd)]

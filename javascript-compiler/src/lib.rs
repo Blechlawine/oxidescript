@@ -1,4 +1,6 @@
-use oxc::allocator::Allocator;
+use std::cell::RefCell;
+
+use oxc::{allocator::Allocator, ast::ast::ImportDeclaration};
 use oxc_codegen::Codegen;
 use oxidescript::compiler::Compiler;
 
@@ -27,11 +29,15 @@ impl Compiler for JavascriptCompiler {
 
 struct JavascriptCompilerContext<'a> {
     allocator: &'a Allocator,
+    imports: RefCell<oxc::allocator::Vec<'a, ImportDeclaration<'a>>>,
 }
 
 impl<'ctx> JavascriptCompilerContext<'ctx> {
     fn new(allocator: &'ctx Allocator) -> Self {
-        JavascriptCompilerContext { allocator }
+        JavascriptCompilerContext {
+            allocator,
+            imports: RefCell::new(oxc::allocator::Vec::new_in(allocator)),
+        }
     }
 }
 

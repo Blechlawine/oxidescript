@@ -61,6 +61,7 @@ pub enum Token {
     Type,
     Trait,
     Impl,
-    Import,
-    Export,
+    Use,
+    Pub,
+    Mod,
 }

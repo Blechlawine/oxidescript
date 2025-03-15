@@ -3,6 +3,7 @@ pub mod atoms;
 pub mod declaration;
 pub mod expression;
 pub mod function;
+pub mod modules;
 pub mod pratt_expression;
 pub mod statement;
 pub mod r#type;
@@ -92,7 +93,7 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use ast::{
-        CallExpr, ElseIfExpr, FunctionDecl, IfExpr, IndexExpr, InfixExpr, MemberAccessExpr,
+        CallExpr, ElseIfExpr, FunctionDecl, IfExpr, IndexExpr, InfixExpr, MemberAccessExpr, Path,
         StructDecl, StructField, TypeExpression,
     };
 
@@ -269,7 +270,9 @@ mod tests {
                         ))),
                     })),
                 },
-                return_type: Some(TypeExpression::Ident(Identifier("Number".to_string()))),
+                return_type: Some(TypeExpression::Path(Path::from(Identifier(
+                    "Number".to_string(),
+                )))),
             }),
         )];
 
@@ -286,9 +289,9 @@ mod tests {
         let program: Program = vec![
             Statement::ExpressionStatement {
                 expression: Expression::IndexExpression(IndexExpr {
-                    lhs: Box::new(Expression::IdentifierExpression(Identifier(
+                    lhs: Box::new(Expression::PathExpression(Path::from(Identifier(
                         "array".to_string(),
-                    ))),
+                    )))),
                     index: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                         Number::I {
                             base: NumberBase::Dec,
@@ -300,9 +303,9 @@ mod tests {
             },
             Statement::ExpressionStatement {
                 expression: Expression::IndexExpression(IndexExpr {
-                    lhs: Box::new(Expression::IdentifierExpression(Identifier(
+                    lhs: Box::new(Expression::PathExpression(Path::from(Identifier(
                         "array".to_string(),
-                    ))),
+                    )))),
                     index: Box::new(Expression::InfixExpression(InfixExpr {
                         op: InfixOperator::Plus,
                         lhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
@@ -332,9 +335,9 @@ mod tests {
 
         let program: Program = vec![Statement::ExpressionStatement {
             expression: Expression::CallExpression(CallExpr {
-                lhs: Box::new(Expression::IdentifierExpression(Identifier(
+                lhs: Box::new(Expression::PathExpression(Path::from(Identifier(
                     "foo".to_string(),
-                ))),
+                )))),
                 arguments: vec![
                     Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
                         base: NumberBase::Dec,
@@ -498,8 +501,8 @@ mod tests {
                                     })),
                                 })),
                                 rhs: Box::new(Expression::CallExpression(CallExpr {
-                                    lhs: Box::new(Expression::IdentifierExpression(Identifier(
-                                        "foo".to_string(),
+                                    lhs: Box::new(Expression::PathExpression(Path::from(
+                                        Identifier("foo".to_string()),
                                     ))),
                                     arguments: vec![
                                         Expression::LiteralExpression(Literal::NumberLiteral(
@@ -536,17 +539,17 @@ mod tests {
                             })),
                         )),
                     ],
-                    return_value: Some(Expression::IdentifierExpression(Identifier(
+                    return_value: Some(Expression::PathExpression(Path::from(Identifier(
                         "variable".to_string(),
-                    ))),
+                    )))),
                 },
                 return_type: None,
             })),
             Statement::ExpressionStatement {
                 expression: Expression::CallExpression(CallExpr {
-                    lhs: Box::new(Expression::IdentifierExpression(Identifier(
+                    lhs: Box::new(Expression::PathExpression(Path::from(Identifier(
                         "test".to_string(),
-                    ))),
+                    )))),
                     arguments: vec![],
                 }),
                 has_semicolon: true,
@@ -554,9 +557,9 @@ mod tests {
             Statement::ExpressionStatement {
                 expression: Expression::CallExpression(CallExpr {
                     lhs: Box::new(Expression::MemberAccessExpression(MemberAccessExpr {
-                        lhs: Box::new(Expression::IdentifierExpression(Identifier(
+                        lhs: Box::new(Expression::PathExpression(Path::from(Identifier(
                             "console".into(),
-                        ))),
+                        )))),
                         ident: Identifier("log".into()),
                     })),
                     arguments: vec![Expression::LiteralExpression(Literal::StringLiteral(
@@ -567,9 +570,9 @@ mod tests {
             },
             Statement::ExpressionStatement {
                 expression: Expression::IndexExpression(IndexExpr {
-                    lhs: Box::new(Expression::IdentifierExpression(Identifier(
+                    lhs: Box::new(Expression::PathExpression(Path::from(Identifier(
                         "array".to_string(),
-                    ))),
+                    )))),
                     index: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                         Number::I {
                             base: NumberBase::Dec,
@@ -596,11 +599,11 @@ mod tests {
                 fields: vec![
                     StructField {
                         ident: Identifier("foo".to_string()),
-                        r#type: TypeExpression::Ident(Identifier("String".to_string())),
+                        r#type: TypeExpression::Path(Path::from(Identifier("String".to_string()))),
                     },
                     StructField {
                         ident: Identifier("bar".to_string()),
-                        r#type: TypeExpression::Ident(Identifier("Number".to_string())),
+                        r#type: TypeExpression::Path(Path::from(Identifier("Number".to_string()))),
                     },
                 ],
             }),

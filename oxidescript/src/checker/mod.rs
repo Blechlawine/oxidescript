@@ -1,21 +1,36 @@
-use std::{cell::RefCell, collections::HashMap, fmt::Display};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, HashMap},
+    fmt::Display,
+};
 
 use serde::Deserialize;
 
+use crate::parser::ast::{Identifier, Path};
+
 pub mod declaration;
 pub mod expression;
+pub mod modules;
 pub mod program;
 
 #[derive(Debug)]
 pub struct CheckContext {
     pub scope: RefCell<Scope>,
     errors: RefCell<Vec<CheckError>>,
+    resolved: RefCell<BTreeMap<Path, Resolved>>,
+    current_resolved_path: Path,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum Resolved {
+    Module,
+    Type(VariableType),
+}
+
+#[derive(Debug, Default)]
 pub struct Scope {
     pub variables: HashMap<String, Variable>,
-    types: HashMap<String, VariableType>,
+    local_types: HashMap<String, VariableType>,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -71,42 +86,68 @@ pub trait Check {
 
 impl Default for CheckContext {
     fn default() -> Self {
+        let mut resolved = BTreeMap::new();
+        resolved.insert(Path::from("String"), Resolved::Type(VariableType::String));
+        resolved.insert(Path::from("number"), Resolved::Type(VariableType::Number));
+        resolved.insert(Path::from("bool"), Resolved::Type(VariableType::Bool));
         Self {
             scope: RefCell::new(Scope::default()),
             errors: RefCell::new(vec![]),
+            resolved: RefCell::new(resolved),
+            current_resolved_path: Path::from(Identifier("crate".to_string())),
         }
     }
 }
 
 impl CheckContext {
-    pub fn resolve_type(&self, type_name: &str) -> VariableType {
-        self.scope
-            .borrow()
-            .types
-            .get(type_name)
-            .unwrap_or_else(|| panic!("Couldn't resolve type {type_name}"))
-            .clone()
+    pub fn resolve(&self, path: &Path) -> Option<Resolved> {
+        self.resolved.borrow().get(path).cloned()
     }
 
-    pub fn resolve_variable(&self, variable_name: &str) -> Variable {
-        self.scope
-            .borrow()
-            .variables
-            .get(variable_name)
-            .unwrap_or_else(|| panic!("Couldn't find variable {variable_name} in scope"))
-            .clone()
+    /// resolve a variable path in the current scope
+    pub fn resolve_variable(&self, variable_path: &Path) -> Variable {
+        if variable_path.len() == 1 {
+            // the path is only the identifier, so we should resolve from scope
+            let ident = variable_path.elements.first().unwrap();
+            self.scope
+                .borrow()
+                .variables
+                .get(&ident.0)
+                .unwrap_or_else(|| panic!("Couldn't find variable {} in scope", ident.0))
+                .clone()
+        } else {
+            // the path is not just an identifier, so we should resolve from resolved
+            todo!()
+        }
     }
-}
 
-impl Default for Scope {
-    fn default() -> Self {
-        let mut types = HashMap::new();
-        types.insert("String".to_string(), VariableType::String);
-        types.insert("number".to_string(), VariableType::Number);
-        types.insert("bool".to_string(), VariableType::Bool);
-        Self {
-            variables: HashMap::new(),
-            types,
+    /// inserts a type into resolved at the current path
+    pub fn insert_declaration(&self, name: Path, insert: Resolved) {
+        let path = self.current_resolved_path.join(&name);
+        for i in 0..path.len() - 1 {
+            let (parts, rest) = path.elements.split_at(i);
+            let resolved = self.resolved.borrow();
+            let existing = resolved.get(&Path {
+                elements: parts.to_vec(),
+            });
+            let is_last_element = rest.is_empty();
+            if let Some(existing) = existing {
+                if is_last_element && *existing != insert {
+                    panic!("Can't overwrite existing type at path: {}", path)
+                }
+            } else if is_last_element {
+                self.resolved
+                    .borrow_mut()
+                    .insert(path.clone(), insert.clone());
+                break;
+            } else {
+                self.resolved.borrow_mut().insert(
+                    Path {
+                        elements: parts.to_vec(),
+                    },
+                    Resolved::Module,
+                );
+            }
         }
     }
 }
