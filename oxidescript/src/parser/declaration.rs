@@ -1,12 +1,12 @@
 use nom::{
     branch::alt,
-    combinator::map,
+    combinator::{map, opt},
     multi::many0,
     sequence::{terminated, tuple},
     IResult, Parser,
 };
 
-use crate::lexer::tokens::Tokens;
+use crate::{checker::VariableType, lexer::tokens::Tokens};
 
 use super::{
     ast::{Declaration, FunctionDecl, StructDecl, StructField},
@@ -67,16 +67,18 @@ fn parse_function_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
             l_paren_tag,
             parse_parameters,
             r_paren_tag,
+            opt((minus_tag, greater_than_tag, parse_type_expression)),
             l_squirly_tag,
             parse_block,
             r_squirly_tag,
         ),
-        |(_, name, _, parameters, _, _, body, _)| {
+        |(_, name, _, parameters, _, return_type, _, body, _)| {
             // dbg!(&name, &parameters, &body);
             Declaration::FunctionDeclaration(FunctionDecl {
                 name,
                 parameters,
                 body,
+                return_type: return_type.map(|(_, _, rt)| rt),
             })
         },
     )

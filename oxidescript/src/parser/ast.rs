@@ -77,6 +77,7 @@ pub enum Declaration {
 pub struct FunctionDecl {
     pub name: Identifier,
     pub parameters: Vec<Parameter>,
+    pub return_type: Option<TypeExpression>,
     pub body: Block,
 }
 

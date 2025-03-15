@@ -195,6 +195,7 @@ mod tests {
                     )],
                     return_value: None,
                 },
+                return_type: None,
             }),
         )];
 
@@ -241,7 +242,7 @@ mod tests {
     #[test]
     fn function_implicit_return() {
         let input = "\
-            fn test() {\
+            fn test() -> Number {\
                 5 - 10\
             }\
         "
@@ -268,6 +269,7 @@ mod tests {
                         ))),
                     })),
                 },
+                return_type: Some(TypeExpression::Ident(Identifier("Number".to_string()))),
             }),
         )];
 
@@ -538,6 +540,7 @@ mod tests {
                         "variable".to_string(),
                     ))),
                 },
+                return_type: None,
             })),
             Statement::ExpressionStatement {
                 expression: Expression::CallExpression(CallExpr {
