@@ -6,6 +6,7 @@ use std::{
 
 use clap::Parser as ClapParser;
 use oxidescript::{
+    checker::{Check, CheckContext},
     compiler::Compiler,
     lexer::{tokens::Tokens, Lexer},
     parser::Parser,
@@ -150,6 +151,9 @@ fn compile_file(path: &Path, ctx: &Context) -> String {
         println!("Unparsed: {:?}", unparsed);
         println!("AST: {:#?}", &ast);
     }
+
+    let checker_ctx = CheckContext::default();
+    ast.check(&checker_ctx);
 
     let compiler = JavascriptCompiler::new();
     let compiled = compiler.compile(ast);

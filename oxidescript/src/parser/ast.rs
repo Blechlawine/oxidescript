@@ -1,5 +1,7 @@
 use std::{fmt::Display, num::ParseFloatError};
 
+use crate::checker::VariableType;
+
 pub type Program = Vec<Statement>;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -74,10 +76,13 @@ pub enum Declaration {
         parameters: Vec<Parameter>,
         body: Block,
     },
-    StructDeclaration {
-        ident: Identifier,
-        fields: Vec<StructField>,
-    },
+    StructDeclaration(StructDecl),
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct StructDecl {
+    pub ident: Identifier,
+    pub fields: Vec<StructField>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -188,6 +193,31 @@ pub enum InfixOperator {
     BitwiseAnd,
     BitwiseLeftShift,
     BitwiseRightShift,
+}
+
+impl Display for InfixOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InfixOperator::Equal => f.write_str("=="),
+            InfixOperator::NotEqual => f.write_str("!="),
+            InfixOperator::GreaterThan => f.write_str(">"),
+            InfixOperator::LessThan => f.write_str("<"),
+            InfixOperator::GreaterThanEqual => f.write_str(">="),
+            InfixOperator::LessThanEqual => f.write_str("<="),
+            InfixOperator::Plus => f.write_str("+"),
+            InfixOperator::Minus => f.write_str("-"),
+            InfixOperator::Multiply => f.write_str("*"),
+            InfixOperator::Divide => f.write_str("/"),
+            InfixOperator::Modulo => f.write_str("%"),
+            InfixOperator::LogicalOr => f.write_str("||"),
+            InfixOperator::LogicalAnd => f.write_str("&&"),
+            InfixOperator::BitwiseOr => f.write_str("|"),
+            InfixOperator::BitwiseXor => f.write_str("^"),
+            InfixOperator::BitwiseAnd => f.write_str("&"),
+            InfixOperator::BitwiseLeftShift => f.write_str("<<"),
+            InfixOperator::BitwiseRightShift => f.write_str(">>"),
+        }
+    }
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]

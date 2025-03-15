@@ -91,8 +91,8 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use ast::{
-        CallExpr, ElseIfExpr, IfExpr, IndexExpr, InfixExpr, MemberAccessExpr, StructField,
-        TypeExpression,
+        CallExpr, ElseIfExpr, IfExpr, IndexExpr, InfixExpr, MemberAccessExpr, StructDecl,
+        StructField, TypeExpression,
     };
 
     use super::{
@@ -587,7 +587,7 @@ mod tests {
             bar: Number,
         }"#;
         let program: Program = vec![Statement::DeclarationStatement(
-            Declaration::StructDeclaration {
+            Declaration::StructDeclaration(StructDecl {
                 ident: Identifier("Test".to_string()),
                 fields: vec![
                     StructField {
@@ -599,7 +599,7 @@ mod tests {
                         r#type: TypeExpression::Ident(Identifier("Number".to_string())),
                     },
                 ],
-            },
+            }),
         )];
         assert_input_with_program(input.as_bytes(), program);
     }

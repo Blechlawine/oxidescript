@@ -9,7 +9,7 @@ use nom::{
 use crate::lexer::tokens::Tokens;
 
 use super::{
-    ast::{Declaration, StructField},
+    ast::{Declaration, StructDecl, StructField},
     atoms::*,
     expression::parse_expression,
     function::{parse_block, parse_parameters},
@@ -88,7 +88,7 @@ fn parse_struct_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
             many0(parse_struct_field),
             r_squirly_tag,
         )),
-        |(_, ident, _, fields, _)| Declaration::StructDeclaration { ident, fields },
+        |(_, ident, _, fields, _)| Declaration::StructDeclaration(StructDecl { ident, fields }),
     )
     .parse(input)
 }
