@@ -1,7 +1,7 @@
 use nom::{
     branch::alt,
     combinator::{map, opt},
-    multi::many0,
+    multi::{many0, separated_list0},
     sequence::{delimited, tuple},
     IResult,
 };
@@ -14,32 +14,18 @@ use super::{
     comma_tag,
     expression::parse_expression,
     parse_identifier,
+    r#type::parse_type_expression,
     statement::parse_statement,
 };
 
 pub fn parse_parameters(input: Tokens) -> IResult<Tokens, Vec<Parameter>> {
-    map(
-        tuple((
-            opt(parse_parameter),
-            many0(tuple((comma_tag, parse_parameter))),
-        )),
-        |(first, rest)| {
-            let mut params = vec![];
-            if let Some(first) = first {
-                params.push(first);
-            }
-            params
-                .into_iter()
-                .chain(rest.into_iter().map(|(_, param)| param))
-                .collect()
-        },
-    )(input)
+    separated_list0(comma_tag, parse_parameter)(input)
 }
 
 pub fn parse_parameter(input: Tokens) -> IResult<Tokens, Parameter> {
     map(
-        tuple((parse_identifier, colon_tag, parse_identifier)),
-        |(name, _, type_)| Parameter { name, type_ },
+        tuple((parse_identifier, colon_tag, parse_type_expression)),
+        |(name, _, r#type)| Parameter { name, r#type },
     )(input)
 }
 

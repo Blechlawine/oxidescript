@@ -114,7 +114,7 @@ pub struct Block {
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Parameter {
     pub name: Identifier,
-    pub type_: Identifier,
+    pub r#type: TypeExpression,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
