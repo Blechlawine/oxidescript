@@ -8,7 +8,12 @@ pub mod pratt_expression;
 pub mod statement;
 pub mod r#type;
 
+use std::collections::HashMap;
+use std::path::PathBuf;
+
+use ast::IdentifierReference;
 use nom::bytes::complete::take;
+use nom::combinator::map;
 use nom::error::{Error, ErrorKind};
 use nom::multi::many0;
 use nom::Err;
@@ -64,17 +69,29 @@ fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
     }
 }
 
-fn parse_identifier(input: Tokens) -> IResult<Tokens, Identifier> {
+fn parse_ident_name(input: Tokens) -> IResult<Tokens, String> {
     let (rest, found) = take(1usize)(input)?;
     // dbg!(rest, found, input);
     if found.tokens.is_empty() {
         Err(Err::Error(Error::new(input, ErrorKind::Tag)))
     } else {
         match found.tokens[0].clone() {
-            Token::Ident(name) => Ok((rest, Identifier(name))),
+            Token::Ident(name) => Ok((rest, name)),
             _ => Err(Err::Error(Error::new(input, ErrorKind::Tag))),
         }
     }
+}
+
+fn parse_identifier(input: Tokens) -> IResult<Tokens, Identifier> {
+    map(parse_ident_name, |name| Identifier { name, id: None }).parse(input)
+}
+
+fn parse_identifier_reference(input: Tokens) -> IResult<Tokens, IdentifierReference> {
+    map(parse_ident_name, |name| IdentifierReference {
+        name,
+        id: None,
+    })
+    .parse(input)
 }
 
 fn parse_program(input: Tokens) -> IResult<Tokens, Program> {
@@ -85,6 +102,16 @@ fn parse_program(input: Tokens) -> IResult<Tokens, Program> {
 pub struct Parser;
 
 impl Parser {
+    pub fn parse_tree<'s>(
+        tree: &'s HashMap<&'s PathBuf, Tokens<'s>>,
+    ) -> HashMap<&'s PathBuf, IResult<Tokens<'s>, Program>> {
+        let mut output = HashMap::new();
+        for (path, source) in tree {
+            output.insert(*path, Parser::parse(*source));
+        }
+        output
+    }
+
     pub fn parse(tokens: Tokens) -> IResult<Tokens, Program> {
         parse_program(tokens)
     }
@@ -93,8 +120,8 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use ast::{
-        CallExpr, ElseIfExpr, FunctionDecl, IfExpr, IndexExpr, InfixExpr, MemberAccessExpr, Path,
-        StructDecl, StructField, TypeExpression,
+        CallExpr, ElseIfExpr, FunctionDecl, IdentifierReference, IfExpr, IndexExpr, InfixExpr,
+        MemberAccessExpr, Path, StructDecl, StructField, TypeExpression,
     };
 
     use super::{
@@ -123,7 +150,10 @@ mod tests {
         .as_bytes();
         let program: Program = vec![Statement::DeclarationStatement(
             Declaration::LetDeclaration(
-                Identifier("test".to_string()),
+                Identifier {
+                    name: "test".to_string(),
+                    id: None,
+                },
                 Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
                     base: NumberBase::Dec,
                     value: 5,
@@ -145,25 +175,37 @@ mod tests {
 
         let program: Program = vec![
             Statement::DeclarationStatement(Declaration::LetDeclaration(
-                Identifier("test".to_string()),
+                Identifier {
+                    name: "test".to_string(),
+                    id: None,
+                },
                 Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
                     base: NumberBase::Dec,
                     value: 5,
                 })),
             )),
             Statement::DeclarationStatement(Declaration::ConstDeclaration(
-                Identifier("stuff".to_string()),
+                Identifier {
+                    name: "stuff".to_string(),
+                    id: None,
+                },
                 Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
                     base: NumberBase::Dec,
                     value: 12,
                 })),
             )),
             Statement::DeclarationStatement(Declaration::LetDeclaration(
-                Identifier("things".to_string()),
+                Identifier {
+                    name: "things".to_string(),
+                    id: None,
+                },
                 Expression::LiteralExpression(Literal::BooleanLiteral(true)),
             )),
             Statement::DeclarationStatement(Declaration::ConstDeclaration(
-                Identifier("foo".to_string()),
+                Identifier {
+                    name: "foo".to_string(),
+                    id: None,
+                },
                 Expression::LiteralExpression(Literal::StringLiteral("bar".to_string())),
             )),
         ];
@@ -182,12 +224,18 @@ mod tests {
 
         let program: Program = vec![Statement::DeclarationStatement(
             Declaration::FunctionDeclaration(FunctionDecl {
-                name: Identifier("test".to_string()),
+                name: Identifier {
+                    name: "test".to_string(),
+                    id: None,
+                },
                 parameters: vec![],
                 body: Some(Block {
                     statements: vec![Statement::DeclarationStatement(
                         Declaration::LetDeclaration(
-                            Identifier("variable".to_string()),
+                            Identifier {
+                                name: "variable".to_string(),
+                                id: None,
+                            },
                             Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
                                 base: NumberBase::Dec,
                                 value: 5,
@@ -210,7 +258,10 @@ mod tests {
 
         let program: Program = vec![Statement::DeclarationStatement(
             Declaration::LetDeclaration(
-                Identifier("foo".to_string()),
+                Identifier {
+                    name: "foo".to_string(),
+                    id: None,
+                },
                 Expression::InfixExpression(InfixExpr {
                     op: InfixOperator::Minus,
                     lhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
@@ -251,7 +302,10 @@ mod tests {
         .as_bytes();
         let program: Program = vec![Statement::DeclarationStatement(
             Declaration::FunctionDeclaration(FunctionDecl {
-                name: Identifier("test".to_string()),
+                name: Identifier {
+                    name: "test".to_string(),
+                    id: None,
+                },
                 parameters: vec![],
                 body: Some(Block {
                     statements: vec![],
@@ -271,9 +325,10 @@ mod tests {
                         ))),
                     })),
                 }),
-                return_type: Some(TypeExpression::Path(Path::from(Identifier(
-                    "Number".to_string(),
-                )))),
+                return_type: Some(TypeExpression::Path(Path::from(IdentifierReference {
+                    name: "Number".to_string(),
+                    id: None,
+                }))),
                 has_body: true,
             }),
         )];
@@ -291,9 +346,12 @@ mod tests {
         let program: Program = vec![
             Statement::ExpressionStatement {
                 expression: Expression::IndexExpression(IndexExpr {
-                    lhs: Box::new(Expression::PathExpression(Path::from(Identifier(
-                        "array".to_string(),
-                    )))),
+                    lhs: Box::new(Expression::PathExpression(Path::from(
+                        IdentifierReference {
+                            name: "array".to_string(),
+                            id: None,
+                        },
+                    ))),
                     index: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                         Number::I {
                             base: NumberBase::Dec,
@@ -305,9 +363,12 @@ mod tests {
             },
             Statement::ExpressionStatement {
                 expression: Expression::IndexExpression(IndexExpr {
-                    lhs: Box::new(Expression::PathExpression(Path::from(Identifier(
-                        "array".to_string(),
-                    )))),
+                    lhs: Box::new(Expression::PathExpression(Path::from(
+                        IdentifierReference {
+                            name: "array".to_string(),
+                            id: None,
+                        },
+                    ))),
                     index: Box::new(Expression::InfixExpression(InfixExpr {
                         op: InfixOperator::Plus,
                         lhs: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
@@ -337,9 +398,12 @@ mod tests {
 
         let program: Program = vec![Statement::ExpressionStatement {
             expression: Expression::CallExpression(CallExpr {
-                lhs: Box::new(Expression::PathExpression(Path::from(Identifier(
-                    "foo".to_string(),
-                )))),
+                lhs: Box::new(Expression::PathExpression(Path::from(
+                    IdentifierReference {
+                        name: "foo".to_string(),
+                        id: None,
+                    },
+                ))),
                 arguments: vec![
                     Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
                         base: NumberBase::Dec,
@@ -471,7 +535,10 @@ mod tests {
 
         let program: Program = vec![
             Statement::DeclarationStatement(Declaration::FunctionDeclaration(FunctionDecl {
-                name: Identifier("test".to_string()),
+                name: Identifier {
+                    name: "test".to_string(),
+                    id: None,
+                },
                 parameters: vec![],
                 has_body: true,
                 body: Some(Block {
@@ -505,7 +572,10 @@ mod tests {
                                 })),
                                 rhs: Box::new(Expression::CallExpression(CallExpr {
                                     lhs: Box::new(Expression::PathExpression(Path::from(
-                                        Identifier("foo".to_string()),
+                                        IdentifierReference {
+                                            name: "foo".to_string(),
+                                            id: None,
+                                        },
                                     ))),
                                     arguments: vec![
                                         Expression::LiteralExpression(Literal::NumberLiteral(
@@ -535,24 +605,33 @@ mod tests {
                             has_semicolon: true,
                         },
                         Statement::DeclarationStatement(Declaration::LetDeclaration(
-                            Identifier("variable".to_string()),
+                            Identifier {
+                                name: "variable".to_string(),
+                                id: None,
+                            },
                             Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
                                 base: NumberBase::Dec,
                                 value: 5,
                             })),
                         )),
                     ],
-                    return_value: Some(Expression::PathExpression(Path::from(Identifier(
-                        "variable".to_string(),
-                    )))),
+                    return_value: Some(Expression::PathExpression(Path::from(
+                        IdentifierReference {
+                            name: "variable".to_string(),
+                            id: None,
+                        },
+                    ))),
                 }),
                 return_type: None,
             })),
             Statement::ExpressionStatement {
                 expression: Expression::CallExpression(CallExpr {
-                    lhs: Box::new(Expression::PathExpression(Path::from(Identifier(
-                        "test".to_string(),
-                    )))),
+                    lhs: Box::new(Expression::PathExpression(Path::from(
+                        IdentifierReference {
+                            name: "test".to_string(),
+                            id: None,
+                        },
+                    ))),
                     arguments: vec![],
                 }),
                 has_semicolon: true,
@@ -560,10 +639,16 @@ mod tests {
             Statement::ExpressionStatement {
                 expression: Expression::CallExpression(CallExpr {
                     lhs: Box::new(Expression::MemberAccessExpression(MemberAccessExpr {
-                        lhs: Box::new(Expression::PathExpression(Path::from(Identifier(
-                            "console".into(),
-                        )))),
-                        ident: Identifier("log".into()),
+                        lhs: Box::new(Expression::PathExpression(Path::from(
+                            IdentifierReference {
+                                name: "console".into(),
+                                id: None,
+                            },
+                        ))),
+                        ident: Identifier {
+                            name: "log".into(),
+                            id: None,
+                        },
                     })),
                     arguments: vec![Expression::LiteralExpression(Literal::StringLiteral(
                         "Hello world".into(),
@@ -573,9 +658,12 @@ mod tests {
             },
             Statement::ExpressionStatement {
                 expression: Expression::IndexExpression(IndexExpr {
-                    lhs: Box::new(Expression::PathExpression(Path::from(Identifier(
-                        "array".to_string(),
-                    )))),
+                    lhs: Box::new(Expression::PathExpression(Path::from(
+                        IdentifierReference {
+                            name: "array".to_string(),
+                            id: None,
+                        },
+                    ))),
                     index: Box::new(Expression::LiteralExpression(Literal::NumberLiteral(
                         Number::I {
                             base: NumberBase::Dec,
@@ -598,15 +686,30 @@ mod tests {
         }"#;
         let program: Program = vec![Statement::DeclarationStatement(
             Declaration::StructDeclaration(StructDecl {
-                ident: Identifier("Test".to_string()),
+                ident: Identifier {
+                    name: "Test".to_string(),
+                    id: None,
+                },
                 fields: vec![
                     StructField {
-                        ident: Identifier("foo".to_string()),
-                        r#type: TypeExpression::Path(Path::from(Identifier("String".to_string()))),
+                        ident: Identifier {
+                            name: "foo".to_string(),
+                            id: None,
+                        },
+                        r#type: TypeExpression::Path(Path::from(IdentifierReference {
+                            name: "String".to_string(),
+                            id: None,
+                        })),
                     },
                     StructField {
-                        ident: Identifier("bar".to_string()),
-                        r#type: TypeExpression::Path(Path::from(Identifier("Number".to_string()))),
+                        ident: Identifier {
+                            name: "bar".to_string(),
+                            id: None,
+                        },
+                        r#type: TypeExpression::Path(Path::from(IdentifierReference {
+                            name: "Number".to_string(),
+                            id: None,
+                        })),
                     },
                 ],
             }),

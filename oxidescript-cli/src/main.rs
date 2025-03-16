@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     fs::read_to_string,
     path::{Path, PathBuf},
     process::{exit, Command},
@@ -9,9 +9,10 @@ use std::{
 use clap::Parser as ClapParser;
 use environment::JavascriptEnvironment;
 use oxidescript::{
-    checker::{Check, CheckContext},
+    checker::{AstNode, SemanticAnalyser},
     compiler::Compiler,
     lexer::{tokens::Tokens, Lexer},
+    loader::SourceLoader,
     parser::Parser,
 };
 use oxidescript_javascript_compiler::JavascriptCompiler;
@@ -122,7 +123,7 @@ fn main() {
                 PathBuf::from(".")
             };
 
-            let compiled = compile_file(&args.input, &ctx, environment.unwrap_or_default());
+            let compiled = compile_files(&args.input, &ctx, environment.unwrap_or_default());
             let new_file_name = format!("{}.js", args.input.file_stem().unwrap().to_str().unwrap());
             let compiled_path = outdir.join(new_file_name);
             std::fs::write(compiled_path, compiled).unwrap();
@@ -135,7 +136,7 @@ fn main() {
             std::fs::create_dir_all(devdir).unwrap();
             let with = with.unwrap_or_default();
 
-            let compiled = compile_file(&args.input, &ctx, JavascriptEnvironment::from(&with));
+            let compiled = compile_files(&args.input, &ctx, JavascriptEnvironment::from(&with));
             let new_file_name = format!("{}.js", args.input.file_stem().unwrap().to_str().unwrap());
             let compiled_path = devdir.join(new_file_name);
             std::fs::write(&compiled_path, compiled).unwrap();
@@ -145,33 +146,50 @@ fn main() {
     }
 }
 
-fn compile_file(path: &Path, ctx: &Context, environment: JavascriptEnvironment) -> String {
-    let loaded_file = load_file(path);
+fn compile_files(path: &Path, ctx: &Context, environment: JavascriptEnvironment) -> String {
+    let loader = SourceLoader::new(path);
+    let source_tree = loader.load();
     if ctx.verbose {
-        println!("Loaded file: {:?}", &loaded_file);
+        println!("Loaded file: {:#?}", &source_tree);
     }
 
-    let (unlexed, tokens) = Lexer::lex_tokens(loaded_file.as_bytes()).unwrap();
+    let lexed = Lexer::lex_source_tree(&source_tree);
     if ctx.verbose {
-        println!("Unlexed: {:?}", unlexed);
-        println!("Tokens: {:#?}", tokens);
+        println!("Lexed: {:#?}", lexed);
     }
 
-    let (unparsed, ast) = Parser::parse(Tokens::new(&tokens)).unwrap();
+    let lexed_tree = lexed
+        .iter()
+        .map(|(key, value)| match value {
+            Ok((_, lexed)) => (*key, Tokens::new(lexed)),
+            Err(err) => todo!("report lexer error"),
+        })
+        .collect::<HashMap<_, _>>();
+
+    let parsed = Parser::parse_tree(&lexed_tree);
     if ctx.verbose {
-        println!("Unparsed: {:?}", unparsed);
-        println!("AST: {:#?}", &ast);
+        println!("Parsed: {:#?}", &parsed);
     }
+
+    let parsed_tree = parsed
+        .iter()
+        .map(|(key, value)| match value {
+            Ok((_, parsed)) => (*key, parsed),
+            Err(err) => todo!("report parser error"),
+        })
+        .collect::<HashMap<_, _>>();
 
     let errors = RefCell::new(vec![]);
-    let resolved = RefCell::new(BTreeMap::new());
-    let mut checker_ctx = CheckContext::new(&errors, &resolved);
-    checker_ctx.init();
-    environment.load(&mut checker_ctx);
-    ast.check(&checker_ctx);
+    let mut analyser = SemanticAnalyser::new(&errors);
+    analyser.init();
+    // TODO: do i want to load the environment like this or should the user put a extern module in
+    // their source code depending on what environment they want to build for?
+    environment.load(&mut analyser);
+    // let analyser = analyser.analyse_program(ast);
+    // ast.check_type(&analyser);
 
     let compiler = JavascriptCompiler::new();
-    let compiled = compiler.compile(ast);
+    // let compiled = compiler.compile(ast);
     if ctx.verbose {
         println!("{}", compiled);
     }

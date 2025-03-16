@@ -1,76 +1,37 @@
-use std::{
-    cell::RefCell,
-    collections::{BTreeMap, HashMap},
-    fmt::Display,
-};
+use std::{cell::RefCell, collections::HashMap};
 
-use crate::parser::ast::{Identifier, Path};
+use module_resolver::SymbolsResolver;
+use symbols::{ModuleSymbol, Symbol, SymbolId, SymbolInner};
+use type_checker::VariableType;
+
+use crate::parser::ast::{Path, Program};
 
 pub mod declaration;
 pub mod expression;
+pub mod module_resolver;
 pub mod modules;
 pub mod program;
+pub mod symbols;
+pub mod type_checker;
 
 #[derive(Debug)]
-pub struct CheckContext<'c> {
-    pub scope: RefCell<Scope>,
+pub struct SemanticAnalyser<'c> {
+    parent_scopes: RefCell<HashMap<Scope, Scope>>,
+    symbol_table: SymbolTable,
     errors: &'c RefCell<Vec<CheckError>>,
-    resolved: &'c RefCell<BTreeMap<Path, Resolved>>,
-    current_resolved_path: Path,
+    // resolved: &'c RefCell<BTreeMap<Path, Resolved>>,
+    /// this is the location in the ast, where we are
+    current_scope: Option<Scope>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Resolved {
-    Module,
-    Type(VariableType),
-}
-
-#[derive(Debug, Default)]
-pub struct Scope {
-    pub variables: HashMap<String, Variable>,
-    local_types: HashMap<String, VariableType>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Variable {
-    r#type: VariableType,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
-pub enum VariableType {
-    String,
-    Number,
-    Bool,
-    Struct {
-        fields: HashMap<String, VariableType>,
-    },
-    Vec(Box<VariableType>),
-    Function {
-        parameters: Vec<VariableType>,
-        return_type: Box<VariableType>,
-    },
-    /// the type which non-returning if and for expressions infer to
-    #[default]
-    Void,
-}
-
-impl Display for VariableType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            VariableType::String => f.write_str("String"),
-            VariableType::Number => f.write_str("number"),
-            VariableType::Bool => f.write_str("bool"),
-            VariableType::Struct { .. } => f.write_str("Struct"),
-            VariableType::Vec(variable_type) => write!(f, "Vec<{variable_type}>"),
-            VariableType::Void => f.write_str("void"),
-            VariableType::Function {
-                parameters,
-                return_type,
-            } => {
-                write!(f, "({:?}) -> {}", parameters, return_type)
-            }
-        }
-    }
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Scope {
+    /// inside a module, the entrypoint scope is crate::main
+    Module(SymbolId),
+    /// inside a function
+    Function(SymbolId),
+    /// Block scope, like in if blocks
+    Block(Path),
 }
 
 #[derive(Debug)]
@@ -78,111 +39,126 @@ pub enum CheckError {
     WrongType,
 }
 
-pub trait Check {
-    fn check(&self, ctx: &CheckContext) -> VariableType;
+pub trait AstNode {
+    fn visit(&mut self, visitor: &mut dyn AstVisitor);
+    fn check_type(&self, ctx: &TypeChecker) -> VariableType;
 }
 
-impl<'c> CheckContext<'c> {
-    pub fn new(
-        errors: &'c RefCell<Vec<CheckError>>,
-        resolved: &'c RefCell<BTreeMap<Path, Resolved>>,
-    ) -> Self {
+pub trait AstVisitor {}
+
+struct TypeChecker<'s> {
+    symbols: &'s SymbolTable,
+}
+
+#[derive(Debug, Default)]
+struct SymbolTable {
+    symbols: HashMap<SymbolId, Symbol>,
+}
+
+impl<'c> SemanticAnalyser<'c> {
+    pub fn new(errors: &'c RefCell<Vec<CheckError>>) -> Self {
         Self {
-            scope: RefCell::new(Scope::default()),
+            parent_scopes: RefCell::new(HashMap::new()),
+            symbol_table: SymbolTable::default(),
             errors,
-            resolved,
-            current_resolved_path: Path::from(Identifier("crate".to_string())),
+            current_scope: None,
         }
     }
 
-    pub fn init(&self) {
-        self.resolved
-            .borrow_mut()
-            .insert(Path::from("String"), Resolved::Type(VariableType::String));
-        self.resolved
-            .borrow_mut()
-            .insert(Path::from("number"), Resolved::Type(VariableType::Number));
-        self.resolved
-            .borrow_mut()
-            .insert(Path::from("bool"), Resolved::Type(VariableType::Bool));
+    pub fn analyse_program(mut self, node: Program) -> Self {
+        // 1. resolve modules and lex and parse them and include them in the ast, or if they have
+        //    inline content, Option::take that content and put it into the module tree
+        // 2. check types
+        // 3. check for unused things, and remove them from the ast
+        let main_module_id = SymbolId::new();
+        let main_scope = Scope::Module(main_module_id);
+        self.symbol_table.symbols.insert(
+            main_module_id,
+            Symbol {
+                scope: main_scope,
+                inner: SymbolInner::Module(ModuleSymbol::Intern { ast: Some(node) }),
+            },
+        );
+        let mut module_resolver = SymbolsResolver::new(&mut self.symbol_table);
+        module_resolver.start_resolving(main_module_id);
+        // node.visit(&mut module_resolver);
+        self
     }
 
-    pub fn resolve(&self, path: &Path) -> Option<Resolved> {
-        self.resolved.borrow().get(path).cloned()
+    pub fn init(&mut self) {
+        // self.resolved
+        //     .borrow_mut()
+        //     .insert(Path::from("String"), Resolved::Type(VariableType::String));
+        // self.resolved
+        //     .borrow_mut()
+        //     .insert(Path::from("number"), Resolved::Type(VariableType::Number));
+        // self.resolved
+        //     .borrow_mut()
+        //     .insert(Path::from("bool"), Resolved::Type(VariableType::Bool));
     }
 
     /// resolve a variable path in the current scope
-    pub fn resolve_variable(&self, variable_path: &Path) -> Variable {
-        // dbg!(&variable_path);
-        if variable_path.len() == 1 {
-            // the path is only the identifier, so we should resolve from scope
-            let ident = variable_path.elements.first().unwrap();
-            self.scope
-                .borrow()
-                .variables
-                .get(&ident.0)
-                .unwrap_or_else(|| panic!("Couldn't find variable {} in scope", ident.0))
-                .clone()
-        } else {
-            // dbg!(&self.resolved);
-            // the path is not just an identifier, so we should resolve from resolved
-            let resolved = self.resolved.borrow().get(variable_path).cloned();
-            if let Some(Resolved::Type(resolved)) = resolved {
-                Variable { r#type: resolved }
-            } else {
-                todo!("path resolves to module");
-            }
-        }
+    pub fn resolve_symbol(&self, id: SymbolId) -> Symbol {
+        self.symbol_table
+            .symbols
+            .get(&id)
+            .unwrap_or_else(|| panic!("Couldn't find symbol {} in scope", id))
+            .clone()
     }
 
-    /// inserts a type into resolved at the current path
-    pub fn insert_declaration(&self, name: Path, insert: Resolved) {
-        let path = self.current_resolved_path.join(&name);
-        for i in 0..path.len() {
-            let (parts, rest) = path.elements.split_at(i + 1);
-            let existing = {
-                let resolved = self.resolved.borrow();
-                resolved
-                    .get(&Path {
-                        elements: parts.to_vec(),
-                    })
-                    .cloned()
-            };
-            let is_last_element = rest.is_empty();
-            if let Some(existing) = existing {
-                if is_last_element && existing != insert {
-                    panic!("Can't overwrite existing type at path: {}", path)
-                }
-            } else if is_last_element {
-                // println!("inserting type, {:?}", &path);
-                self.resolved
-                    .borrow_mut()
-                    .insert(path.clone(), insert.clone());
-                break;
-            } else {
-                // println!("inserting module, {:?}", &parts);
-                self.resolved.borrow_mut().insert(
-                    Path {
-                        elements: parts.to_vec(),
-                    },
-                    Resolved::Module,
-                );
-            }
-        }
-    }
+    // inserts a type into resolved at the current path
+    // pub fn insert_declaration(&self, name: Path, insert: Resolved) {
+    //     let path = self.current_scope.join(&name);
+    //     for i in 0..path.len() {
+    //         let (parts, rest) = path.elements.split_at(i + 1);
+    //         let existing = {
+    //             let resolved = self.resolved.borrow();
+    //             resolved
+    //                 .get(&Path {
+    //                     elements: parts.to_vec(),
+    //                     full_path: None,
+    //                 })
+    //                 .cloned()
+    //         };
+    //         let is_last_element = rest.is_empty();
+    //         if let Some(existing) = existing {
+    //             if is_last_element && existing != insert {
+    //                 panic!("Can't overwrite existing type at path: {}", path)
+    //             }
+    //         } else if is_last_element {
+    //             // println!("inserting type, {:?}", &path);
+    //             self.symbol_table
+    //                 .borrow_mut()
+    //                 .insert(path.clone(), insert.clone());
+    //             break;
+    //         } else {
+    //             println!("Does this need to be done?");
+    //             // println!("inserting module, {:?}", &parts);
+    //             // self.resolved.borrow_mut().insert(
+    //             //     Path {
+    //             //         elements: parts.to_vec(),
+    //             //     },
+    //             //     Resolved::Module { is_extern: false },
+    //             // );
+    //         }
+    //     }
+    // }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, collections::BTreeMap};
+    use std::cell::RefCell;
 
     use crate::{
-        checker::{Variable, VariableType},
+        checker::{
+            symbols::VariableSymbol, type_checker::VariableType, Scope, Symbol, SymbolId,
+            SymbolInner,
+        },
         lexer::{tokens::Tokens, Lexer},
-        parser::Parser,
+        parser::{ast::Identifier, Parser},
     };
 
-    use super::{Check, CheckContext};
+    use super::SemanticAnalyser;
 
     #[test]
     fn simple_assignment_type_inference() {
@@ -191,17 +167,34 @@ mod tests {
         let tokens = Tokens::new(&r);
         let (_, result) = Parser::parse(tokens).unwrap();
         let errors = RefCell::new(vec![]);
-        let resolved = RefCell::new(BTreeMap::new());
-        let check_ctx = CheckContext::new(&errors, &resolved);
-        check_ctx.init();
-        let inferred = result.check(&check_ctx);
-        assert_eq!(inferred, VariableType::Void);
+        let mut analyser = SemanticAnalyser::new(&errors);
+        analyser.init();
+        let analyser = analyser.analyse_program(result);
+        // let inferred = result.check_type(&analyser);
         assert_eq!(
-            check_ctx.scope.borrow().variables.get("test"),
-            Some(Variable {
-                r#type: VariableType::String
-            })
-            .as_ref()
+            analyser
+                .symbol_table
+                .symbols
+                .iter()
+                .find(|s| match &s.1.inner {
+                    SymbolInner::Module(_) => unreachable!(),
+                    SymbolInner::Type(_) => unreachable!(),
+                    SymbolInner::Function(_) => unreachable!(),
+                    SymbolInner::Variable(variable) => variable.name.name == "test",
+                })
+                .unwrap()
+                .1
+                .clone(),
+            Symbol {
+                inner: SymbolInner::Variable(VariableSymbol {
+                    r#type: Some(VariableType::String),
+                    name: Identifier {
+                        name: "test".to_string(),
+                        id: Some(SymbolId(1))
+                    }
+                }),
+                scope: Scope::Module(SymbolId(0))
+            }
         );
     }
 }

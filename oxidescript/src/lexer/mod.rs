@@ -2,6 +2,7 @@ pub mod token;
 pub mod tokens;
 pub mod utils;
 
+use combinator::all_consuming;
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take};
 use nom::character::complete::{alpha1, alphanumeric1, digit1, multispace0};
@@ -10,8 +11,12 @@ use nom::multi::{many0, many1};
 use nom::sequence::{delimited, pair};
 use nom::*;
 
+use std::collections::HashMap;
+use std::path::PathBuf;
 use std::str;
 use std::str::FromStr;
+
+use crate::loader::SourceTree;
 
 use self::token::Token;
 use self::utils::{concat_slice_vec, convert_vec_utf8};
@@ -202,12 +207,20 @@ fn lex_token(input: &[u8]) -> IResult<&[u8], Token> {
 }
 
 fn lex_tokens(input: &[u8]) -> IResult<&[u8], Vec<Token>> {
-    many0(delimited(multispace0, lex_token, multispace0)).parse(input)
+    all_consuming(many0(delimited(multispace0, lex_token, multispace0))).parse(input)
 }
 
 pub struct Lexer;
 
 impl Lexer {
+    pub fn lex_source_tree(tree: &SourceTree) -> HashMap<&PathBuf, IResult<&[u8], Vec<Token>>> {
+        let mut output = HashMap::new();
+        for (path, source) in tree {
+            output.insert(path, Lexer::lex_tokens(source.as_bytes()));
+        }
+        output
+    }
+
     pub fn lex_tokens(bytes: &[u8]) -> IResult<&[u8], Vec<Token>> {
         lex_tokens(bytes)
             .map(|(slice, result)| (slice, [&result[..], &vec![Token::EOF][..]].concat()))

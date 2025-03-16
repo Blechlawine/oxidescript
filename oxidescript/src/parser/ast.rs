@@ -1,21 +1,37 @@
 use std::{fmt::Display, num::ParseFloatError};
 
+use crate::checker::symbols::SymbolId;
+
 pub type Program = Vec<Statement>;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Module {
-    pub path: Path,
-    /// content is None, when the module is in a different file
-    pub content: Option<Program>,
-    pub is_extern: bool,
+pub enum ModuleDeclaration {
+    Extern {
+        path: Path,
+        content: Program,
+    },
+    Intern {
+        path: Path,
+        /// this is None for modules in separate files, only being populated with semantic analysis
+        content: Option<Program>,
+    },
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, PartialOrd, Ord)]
 pub struct Path {
-    pub elements: Vec<Identifier>,
+    pub elements: Vec<IdentifierReference>,
+    /// this path is populated in semantic analysis
+    pub full_path: Option<Vec<Identifier>>,
 }
 
 impl Path {
+    pub fn new(elements: Vec<IdentifierReference>) -> Self {
+        Self {
+            elements,
+            full_path: None,
+        }
+    }
+
     pub fn len(&self) -> usize {
         self.elements.len()
     }
@@ -27,7 +43,10 @@ impl Path {
     pub fn join(&self, other: &Path) -> Path {
         let mut elements = self.elements.clone();
         elements.extend(other.elements.clone());
-        Path { elements }
+        Path {
+            elements,
+            full_path: None,
+        }
     }
 }
 
@@ -35,7 +54,7 @@ impl Display for Path {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for element in &self.elements {
             f.write_str("::")?;
-            f.write_str(&element.0)?;
+            f.write_str(&element.name)?;
         }
         Ok(())
     }
@@ -47,15 +66,20 @@ where
 {
     fn from(value: T) -> Self {
         Self {
-            elements: vec![Identifier(value.into())],
+            elements: vec![IdentifierReference {
+                name: value.into(),
+                id: None,
+            }],
+            full_path: None,
         }
     }
 }
 
-impl From<Identifier> for Path {
-    fn from(value: Identifier) -> Self {
+impl From<IdentifierReference> for Path {
+    fn from(value: IdentifierReference) -> Self {
         Self {
             elements: vec![value],
+            full_path: None,
         }
     }
 }
@@ -63,6 +87,14 @@ impl From<Identifier> for Path {
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Use {
     pub path: Path,
+    pub resolved_module: Option<Path>,
+    pub imported: Option<Imported>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum Imported {
+    Module(IdentifierReference),
+    Name(IdentifierReference),
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -134,7 +166,7 @@ pub enum Declaration {
     LetDeclaration(Identifier, Expression),
     FunctionDeclaration(FunctionDecl),
     StructDeclaration(StructDecl),
-    ModDeclaration(Module),
+    ModDeclaration(ModuleDeclaration),
     UseDeclaration(Use),
 }
 
@@ -290,7 +322,16 @@ impl Display for InfixOperator {
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, PartialOrd, Ord)]
-pub struct Identifier(pub String);
+pub struct Identifier {
+    pub name: String,
+    pub id: Option<SymbolId>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, PartialOrd, Ord)]
+pub struct IdentifierReference {
+    pub name: String,
+    pub id: Option<SymbolId>,
+}
 
 #[derive(Clone, Eq, PartialEq, Debug, PartialOrd)]
 pub enum Precedence {

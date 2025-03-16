@@ -5,7 +5,7 @@ use oxc::{
     },
     span::{SourceType, Span},
 };
-use oxidescript::parser::ast::FunctionDecl;
+use oxidescript::parser::ast::{FunctionDecl, ModuleDeclaration};
 
 pub mod block;
 pub mod conditional;
@@ -105,13 +105,20 @@ impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Statement {
                         ))
                     }
                     oxidescript::parser::ast::Declaration::ModDeclaration(decl) => {
-                        // this is just for oxidescript, it doesn't compile to anything in
-                        // javascript
-                        oxc::ast::ast::Statement::EmptyStatement(ctx.r#box(
-                            oxc::ast::ast::EmptyStatement {
-                                span: Span::new(0, 0),
-                            },
-                        ))
+                        match decl {
+                            ModuleDeclaration::Extern { .. } => {
+                                // this is just for oxidescript, it doesn't compile to anything in
+                                // javascript
+                                oxc::ast::ast::Statement::EmptyStatement(ctx.r#box(
+                                    oxc::ast::ast::EmptyStatement {
+                                        span: Span::new(0, 0),
+                                    },
+                                ))
+                            }
+                            ModuleDeclaration::Intern { .. } => {
+                                panic!("Module without content in compiler step")
+                            }
+                        }
                     }
                     oxidescript::parser::ast::Declaration::UseDeclaration(decl) => {
                         todo!()

@@ -1,5 +1,5 @@
 use oxidescript::{
-    checker::{Check, CheckContext},
+    checker::{AstNode, SemanticAnalyser},
     lexer::{tokens::Tokens, Lexer},
     parser::Parser,
 };
@@ -35,7 +35,7 @@ impl From<&JavascriptRuntime> for JavascriptEnvironment {
 }
 
 impl JavascriptEnvironment {
-    pub fn load(&self, ctx: &mut CheckContext) {
+    pub fn load(&self, ctx: &mut SemanticAnalyser) {
         let env_file = match self {
             JavascriptEnvironment::Browser => {
                 include_str!("../environments/browser.d.os")
@@ -52,6 +52,6 @@ impl JavascriptEnvironment {
         assert!(unlexed.is_empty());
         let (unparsed, ast) = Parser::parse(Tokens::new(&tokens)).unwrap();
         assert!(unparsed.tokens.is_empty());
-        ast.check(ctx);
+        ast.check_type(ctx);
     }
 }

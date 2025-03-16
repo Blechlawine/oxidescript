@@ -14,16 +14,22 @@ impl<'c> IntoOxc<'c, Expression<'c>> for ForExpr {
                 .map(char::from)
                 .collect::<String>();
             let inner_statements = oxc::allocator::Vec::from_iter_in(
-                [ctx.statement_expr(ctx.expr_call(
-                    ctx.member_access(
-                        oxidescript::parser::ast::Identifier(output_id.clone()).into_oxc(ctx),
-                        ctx.ident_name("push"),
+                [ctx.statement_expr(
+                    ctx.expr_call(
+                        ctx.member_access(
+                            oxidescript::parser::ast::Identifier {
+                                name: output_id.clone(),
+                                id: None,
+                            }
+                            .into_oxc(ctx),
+                            ctx.ident_name("push"),
+                        ),
+                        oxc::allocator::Vec::from_iter_in(
+                            [ctx.iife(self.body.into_oxc(ctx)).into()],
+                            ctx.allocator,
+                        ),
                     ),
-                    oxc::allocator::Vec::from_iter_in(
-                        [ctx.iife(self.body.into_oxc(ctx)).into()],
-                        ctx.allocator,
-                    ),
-                ))],
+                )],
                 ctx.allocator,
             );
             let r#loop = ctx.for_of(
@@ -35,14 +41,22 @@ impl<'c> IntoOxc<'c, Expression<'c>> for ForExpr {
                 [
                     oxc::ast::ast::Statement::VariableDeclaration(oxc::allocator::Box::new_in(
                         ctx.r#let(
-                            oxidescript::parser::ast::Identifier(output_id.clone()).into_oxc(ctx),
+                            oxidescript::parser::ast::Identifier {
+                                name: output_id.clone(),
+                                id: None,
+                            }
+                            .into_oxc(ctx),
                             Some(ctx.array(None)),
                         ),
                         ctx.allocator,
                     )),
                     r#loop,
                     ctx.r#return(Some(
-                        oxidescript::parser::ast::Identifier(output_id).into_oxc(ctx),
+                        oxidescript::parser::ast::Identifier {
+                            name: output_id,
+                            id: None,
+                        }
+                        .into_oxc(ctx),
                     )),
                 ],
                 ctx.allocator,
