@@ -10,3 +10,4 @@ path = "src/lib.rs"
 [dependencies]
 nom = "8"
 walkdir = "2"
+similar = "2"

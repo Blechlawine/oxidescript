@@ -147,7 +147,7 @@ fn main() {
 }
 
 fn compile_files(path: &Path, ctx: &Context, environment: JavascriptEnvironment) -> String {
-    let loader = SourceLoader::new(path);
+    let loader = SourceLoader::new(path.to_path_buf());
     let source_tree = loader.load();
     if ctx.verbose {
         println!("Loaded file: {:#?}", &source_tree);

@@ -321,7 +321,7 @@ impl Display for InfixOperator {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, PartialOrd, Ord)]
+#[derive(Clone, Eq, PartialEq, Debug, PartialOrd, Ord, Hash)]
 pub struct Identifier {
     pub name: String,
     pub id: Option<SymbolId>,
