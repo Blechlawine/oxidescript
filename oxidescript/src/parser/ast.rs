@@ -1,6 +1,6 @@
 use std::{fmt::Display, num::ParseFloatError};
 
-use crate::checker::symbols::SymbolId;
+use crate::resolver::SymbolId;
 
 pub type Program = Vec<Statement>;
 
@@ -17,7 +17,7 @@ pub enum ModuleDeclaration {
     },
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, PartialOrd, Ord)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Path {
     pub elements: Vec<IdentifierReference>,
     /// this path is populated in semantic analysis
@@ -321,13 +321,13 @@ impl Display for InfixOperator {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, PartialOrd, Ord, Hash)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub struct Identifier {
     pub name: String,
     pub id: Option<SymbolId>,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, PartialOrd, Ord)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct IdentifierReference {
     pub name: String,
     pub id: Option<SymbolId>,

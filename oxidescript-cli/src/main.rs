@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     fs::read_to_string,
     path::{Path, PathBuf},
     process::{exit, Command},
@@ -9,7 +9,7 @@ use std::{
 use clap::Parser as ClapParser;
 use environment::JavascriptEnvironment;
 use oxidescript::{
-    checker::{AstNode, SemanticAnalyser},
+    checker::SemanticAnalyser,
     compiler::Compiler,
     lexer::{tokens::Tokens, Lexer},
     loader::SourceLoader,
@@ -189,7 +189,7 @@ fn compile_files(path: &Path, ctx: &Context, environment: JavascriptEnvironment)
     // ast.check_type(&analyser);
 
     let compiler = JavascriptCompiler::new();
-    // let compiled = compiler.compile(ast);
+    let compiled = compiler.compile(ast);
     if ctx.verbose {
         println!("{}", compiled);
     }

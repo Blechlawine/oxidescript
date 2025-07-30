@@ -10,26 +10,14 @@ use crate::JavascriptRuntime;
 pub enum JavascriptEnvironment {
     #[default]
     Browser,
-    Bun,
-    Node,
+    // Maybe we can add more environments here, but for now we just support the browser
 }
 
 impl From<&str> for JavascriptEnvironment {
     fn from(value: &str) -> Self {
         match value {
             "browser" => JavascriptEnvironment::Browser,
-            "bun" => JavascriptEnvironment::Bun,
-            "node" => JavascriptEnvironment::Node,
             _ => Self::default(),
-        }
-    }
-}
-
-impl From<&JavascriptRuntime> for JavascriptEnvironment {
-    fn from(value: &JavascriptRuntime) -> Self {
-        match value {
-            JavascriptRuntime::Bun => JavascriptEnvironment::Bun,
-            JavascriptRuntime::Node => JavascriptEnvironment::Node,
         }
     }
 }
@@ -39,12 +27,6 @@ impl JavascriptEnvironment {
         let env_file = match self {
             JavascriptEnvironment::Browser => {
                 include_str!("../environments/browser.d.os")
-            }
-            JavascriptEnvironment::Bun => {
-                include_str!("../environments/bun.d.os")
-            }
-            JavascriptEnvironment::Node => {
-                include_str!("../environments/node.d.os")
             }
         };
 

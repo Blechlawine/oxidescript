@@ -1,6 +1,6 @@
 use crate::{
-    checker::symbols::SymbolId,
     parser::ast::{Declaration, Parameter, StructDecl, StructField, TypeExpression},
+    resolver::SymbolId,
 };
 
 use super::{AstNode, AstVisitor, TypeChecker, VariableType};
