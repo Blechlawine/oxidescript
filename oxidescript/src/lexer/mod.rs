@@ -1,31 +1,30 @@
 pub mod token;
 pub mod tokens;
-pub mod utils;
 
 use combinator::all_consuming;
 use nom::branch::alt;
-use nom::bytes::complete::{tag, take};
+use nom::bytes::complete::{escaped, tag, take};
 use nom::character::complete::{alpha1, alphanumeric1, digit1, multispace0};
-use nom::combinator::{map, map_res, recognize};
+use nom::character::none_of;
+use nom::combinator::{map, recognize};
 use nom::multi::{many0, many1};
 use nom::sequence::{delimited, pair};
 use nom::*;
+use nom_locate::LocatedSpan;
 
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::str;
-use std::str::FromStr;
 
-use crate::loader::SourceTree;
+use crate::error::ParserError;
+use crate::loader::{LexedSourceTree, SourceTree};
 
 use self::token::Token;
-use self::utils::{concat_slice_vec, convert_vec_utf8};
 
 // Inspired by: https://github.com/Rydgel/monkey-rust
 
 macro_rules! syntax {
     ($fn_name: ident, $tag_string: literal, $output_token: expr) => {
-        fn $fn_name(s: &[u8]) -> IResult<&[u8], Token> {
+        fn $fn_name(s: Span) -> IResult<Span, Token> {
             map(tag($tag_string), |_| $output_token).parse(s)
         }
     };
@@ -54,7 +53,7 @@ syntax!(divide_operator, "/", Token::Divide);
 syntax!(modulo_operator, "%", Token::Modulo);
 syntax!(assign_operator, "=", Token::Assign);
 
-pub fn lex_operator(input: &[u8]) -> IResult<&[u8], Token> {
+pub fn lex_operator(input: Span) -> IResult<Span, Token> {
     alt((
         equal_operator,
         not_equal_operator,
@@ -93,7 +92,7 @@ syntax!(r_bracket_punctuation, "]", Token::RBracket);
 syntax!(l_squirly_punctuation, "{", Token::LSquirly);
 syntax!(r_squirly_punctuation, "}", Token::RSquirly);
 
-pub fn lex_punctuation(input: &[u8]) -> IResult<&[u8], Token> {
+pub fn lex_punctuation(input: Span) -> IResult<Span, Token> {
     alt((
         comma_punctuation,
         period_punctuation,
@@ -109,122 +108,132 @@ pub fn lex_punctuation(input: &[u8]) -> IResult<&[u8], Token> {
     .parse(input)
 }
 
-fn parse_inside_string(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
-    let (rest1, found1) = take(1usize)(input)?;
-    match found1.as_bytes() {
-        b"\"" => Ok((input, vec![])),
-        b"\\" => {
-            // We found an \ escape character
-            let (rest2, found2) = take(1usize)(rest1)?;
-            parse_inside_string(rest2).map(|(slice, done)| (slice, concat_slice_vec(found2, done)))
-        }
-        c => parse_inside_string(rest1).map(|(slice, done)| (slice, concat_slice_vec(c, done))),
-    }
-}
-
-fn string(input: &[u8]) -> IResult<&[u8], String> {
-    delimited(
-        tag("\""),
-        map_res(parse_inside_string, convert_vec_utf8),
-        tag("\""),
+fn lex_in_string(input: Span) -> IResult<Span, Span> {
+    escaped(
+        none_of(r#"\""#),
+        '\\',
+        alt((tag(r#"""#), tag("n"), tag("r"), tag("t"), tag("\\"))),
     )
     .parse(input)
 }
 
-fn lex_string(input: &[u8]) -> IResult<&[u8], Token> {
-    map(string, Token::StringLiteral).parse(input)
+fn string(input: Span) -> IResult<Span, Span> {
+    delimited(tag("\""), lex_in_string, tag("\"")).parse(input)
+}
+
+fn lex_string(input: Span) -> IResult<Span, Token> {
+    map(string, |s| Token::StringLiteral(s.fragment())).parse(input)
 }
 
 // Identifiers
-fn lex_keyword_or_ident(input: &[u8]) -> IResult<&[u8], Token> {
-    map_res(
+fn lex_keyword_or_ident(input: Span) -> IResult<Span, Token> {
+    map(
         recognize(pair(
             alt((alpha1, tag("_"))),
             many0(alt((alphanumeric1, tag("_")))),
         )),
-        |s: &[u8]| {
-            str::from_utf8(s).map(|syntax| match syntax {
-                "const" => Token::Const,
-                "let" => Token::Let,
-                "fn" => Token::Function,
-                "return" => Token::Return,
-                "if" => Token::If,
-                "else" => Token::Else,
-                "while" => Token::While,
-                "for" => Token::For,
-                "in" => Token::In,
-                "break" => Token::Break,
-                "continue" => Token::Continue,
-                "true" => Token::BooleanLiteral(true),
-                "false" => Token::BooleanLiteral(false),
-                "struct" => Token::Struct,
-                "enum" => Token::Enum,
-                "type" => Token::Type,
-                "trait" => Token::Trait,
-                "impl" => Token::Impl,
-                "mod" => Token::Mod,
-                "use" => Token::Use,
-                "pub" => Token::Pub,
-                "extern" => Token::Extern,
-                _ => Token::Ident(syntax.to_string()),
-            })
+        |s: Span| match *s.fragment() {
+            "const" => Token::Const,
+            "let" => Token::Let,
+            "fn" => Token::Function,
+            "return" => Token::Return,
+            "if" => Token::If,
+            "else" => Token::Else,
+            "while" => Token::While,
+            "for" => Token::For,
+            "in" => Token::In,
+            "break" => Token::Break,
+            "continue" => Token::Continue,
+            "true" => Token::BooleanLiteral(true),
+            "false" => Token::BooleanLiteral(false),
+            "struct" => Token::Struct,
+            "enum" => Token::Enum,
+            "type" => Token::Type,
+            "trait" => Token::Trait,
+            "impl" => Token::Impl,
+            "mod" => Token::Mod,
+            "use" => Token::Use,
+            "pub" => Token::Pub,
+            "extern" => Token::Extern,
+            s => Token::Ident(s),
         },
     )
     .parse(input)
 }
 
 // Numbers
-fn lex_number(input: &[u8]) -> IResult<&[u8], Token> {
+fn lex_float_literal(input: Span) -> IResult<Span, Token> {
     map(
-        map_res(
-            map_res(
-                recognize(many1(alt((digit1, tag("."), tag("_"))))),
-                str::from_utf8,
-            ),
-            FromStr::from_str,
-        ),
-        Token::NumberLiteral,
+        recognize(many1(alt((digit1, tag("."), tag("_"))))),
+        |s: Span| Token::NumberLiteral(s.fragment()),
     )
     .parse(input)
 }
 
 // Illegal
-fn lex_illegal(input: &[u8]) -> IResult<&[u8], Token> {
+fn lex_illegal(input: Span) -> IResult<Span, Token> {
     // This just matches anything to Token::Illegal, because it is the last parser to be called in lex_token
     map(take(1usize), |_| Token::Illegal).parse(input)
 }
 
-fn lex_token(input: &[u8]) -> IResult<&[u8], Token> {
+fn lex_token(input: Span) -> IResult<Span, Token> {
     alt((
         lex_operator,
         lex_punctuation,
         lex_string,
         lex_keyword_or_ident,
-        lex_number,
+        lex_float_literal,
         lex_illegal,
     ))
     .parse(input)
 }
 
-fn lex_tokens(input: &[u8]) -> IResult<&[u8], Vec<Token>> {
+fn lex_tokens(input: Span) -> IResult<Span, Vec<Token>> {
     all_consuming(many0(delimited(multispace0, lex_token, multispace0))).parse(input)
 }
 
-pub struct Lexer;
+pub type Span<'src> = LocatedSpan<&'src str, ()>;
+
+pub struct Lexer {
+    input: SourceTree,
+    errors: Vec<ParserError>,
+}
 
 impl Lexer {
-    pub fn lex_source_tree(tree: &SourceTree) -> HashMap<&PathBuf, IResult<&[u8], Vec<Token>>> {
+    pub fn tokenize(tree: &'_ SourceTree) -> LexedSourceTree<'_> {
         let mut output = HashMap::new();
         for (path, source) in tree {
-            output.insert(path, Lexer::lex_tokens(source.as_bytes()));
+            let path = path.iter().flat_map(|p| p.to_str());
+            let path = path
+                .map(|p| {
+                    let (rest, parsed) = lex_module_identifier(p).unwrap();
+                    assert!(rest.is_empty());
+                    parsed
+                })
+                .collect::<Vec<_>>();
+            let span = Span::new(source.as_str());
+            let (rest, tokens) = Lexer::lex_tokens(span).unwrap();
+            assert!(rest.fragment().is_empty());
+            output.insert(path, tokens);
         }
         output
     }
 
-    pub fn lex_tokens(bytes: &[u8]) -> IResult<&[u8], Vec<Token>> {
-        lex_tokens(bytes)
+    pub fn lex_tokens(input: Span) -> IResult<Span, Vec<Token>> {
+        lex_tokens(input)
             .map(|(slice, result)| (slice, [&result[..], &vec![Token::EOF][..]].concat()))
     }
+}
+
+fn lex_module_identifier(input: &str) -> IResult<&str, Token> {
+    map(
+        recognize(pair(
+            alt((alpha1, tag("_"))),
+            many0(alt((alphanumeric1, tag("_")))),
+        )),
+        |s: &str| Token::Ident(s),
+    )
+    .parse(input)
 }
 
 #[cfg(test)]
@@ -233,16 +242,17 @@ mod tests {
 
     #[test]
     fn one_line() {
-        let input = b"let x = 1;";
+        let input = "let x = 1;";
+        let input = Span::new(input);
         let (rest, tokens) = Lexer::lex_tokens(input).unwrap();
-        assert_eq!(rest, b"");
+        assert_eq!(*rest.fragment(), "");
         assert_eq!(
             tokens,
             vec![
                 Token::Let,
-                Token::Ident("x".to_string()),
+                Token::Ident("x"),
                 Token::Assign,
-                Token::NumberLiteral("1".to_string()),
+                Token::NumberLiteral("1"),
                 Token::SemiColon,
                 Token::EOF
             ]
@@ -251,9 +261,10 @@ mod tests {
 
     #[test]
     fn operators_punctuation() {
-        let input = b"=+/*%-()[]{},;:.<>!<<>>|&^||&&~";
+        let input = "=+/*%-()[]{},;:.<>!<<>>|&^||&&~";
+        let input = Span::new(input);
         let (rest, tokens) = Lexer::lex_tokens(input).unwrap();
-        assert_eq!(rest, b"");
+        assert_eq!(*rest.fragment(), "");
         assert_eq!(
             tokens,
             vec![
@@ -298,56 +309,55 @@ mod tests {
             const things = stuff + hello123 * a - b;
             return things;
         }
-        test(12, 34);"
-            .as_bytes();
+        test(12, 34);";
 
+        let input = Span::new(input);
         let (rest, tokens) = Lexer::lex_tokens(input).unwrap();
-        assert_eq!(rest, b"");
+        assert_eq!(*rest.fragment(), "");
         assert_eq!(
             tokens,
             vec![
                 Token::Const,
-                Token::Ident("stuff".to_string()),
+                Token::Ident("stuff"),
                 Token::Assign,
-                Token::NumberLiteral("1.0".to_string()),
+                Token::NumberLiteral("1.0"),
                 Token::SemiColon,
                 Token::Let,
-                Token::Ident("hello123".to_string()),
+                Token::Ident("hello123"),
                 Token::Assign,
-                Token::NumberLiteral("2.23".to_string()),
+                Token::NumberLiteral("2.23"),
                 Token::SemiColon,
                 Token::Function,
-                Token::Ident("test".to_string()),
+                Token::Ident("test"),
                 Token::LParen,
-                Token::Ident("a".to_string()),
+                Token::Ident("a"),
                 Token::Colon,
-                Token::Ident("number".to_string()),
+                Token::Ident("number"),
                 Token::Comma,
-                Token::Ident("b".to_string()),
+                Token::Ident("b"),
                 Token::Colon,
-                Token::Ident("number".to_string()),
+                Token::Ident("number"),
                 Token::RParen,
                 Token::LSquirly,
                 Token::Const,
-                Token::Ident("things".to_string()),
+                Token::Ident("things"),
                 Token::Assign,
-                Token::Ident("stuff".to_string()),
+                Token::Ident("stuff"),
                 Token::Plus,
-                Token::Ident("hello123".to_string()),
+                Token::Ident("hello123"),
                 Token::Multiply,
-                Token::Ident("a".to_string()),
+                Token::Ident("a"),
                 Token::Minus,
-                Token::Ident("b".to_string()),
+                Token::Ident("b"),
                 Token::SemiColon,
                 Token::Return,
-                Token::Ident("things".to_string()),
+                Token::Ident("things"),
                 Token::SemiColon,
                 Token::RSquirly,
-                Token::Ident("test".to_string()),
+                Token::Ident("test"),
                 Token::LParen,
-                Token::NumberLiteral("12".to_string()),
+                Token::NumberLiteral("12"),
                 Token::Comma,
-                Token::NumberLiteral("34".to_string()),
                 Token::RParen,
                 Token::SemiColon,
                 Token::EOF
@@ -357,44 +367,25 @@ mod tests {
 
     #[test]
     fn string_literals() {
-        let (_, result) = Lexer::lex_tokens(&b"\"foobar\""[..]).unwrap();
-        assert_eq!(
-            result,
-            vec![Token::StringLiteral("foobar".to_owned()), Token::EOF]
-        );
+        let (_, result) = Lexer::lex_tokens(Span::new("\"foobar\"")).unwrap();
+        assert_eq!(result, vec![Token::StringLiteral("foobar"), Token::EOF]);
 
-        let (_, result) = Lexer::lex_tokens(&b"\"foo bar\""[..]).unwrap();
-        assert_eq!(
-            result,
-            vec![Token::StringLiteral("foo bar".to_owned()), Token::EOF]
-        );
+        let (_, result) = Lexer::lex_tokens(Span::new("\"foo bar\"")).unwrap();
+        assert_eq!(result, vec![Token::StringLiteral("foo bar"), Token::EOF]);
 
-        let (_, result) = Lexer::lex_tokens(&b"\"foo\nbar\""[..]).unwrap();
-        assert_eq!(
-            result,
-            vec![Token::StringLiteral("foo\nbar".to_owned()), Token::EOF]
-        );
+        let (_, result) = Lexer::lex_tokens(Span::new("\"foo\nbar\"")).unwrap();
+        assert_eq!(result, vec![Token::StringLiteral("foo\nbar"), Token::EOF]);
 
-        let (_, result) = Lexer::lex_tokens(&b"\"foo\tbar\""[..]).unwrap();
-        assert_eq!(
-            result,
-            vec![Token::StringLiteral("foo\tbar".to_owned()), Token::EOF]
-        );
+        let (_, result) = Lexer::lex_tokens(Span::new("\"foo\tbar\"")).unwrap();
+        assert_eq!(result, vec![Token::StringLiteral("foo\tbar"), Token::EOF]);
 
-        let (_, result) = Lexer::lex_tokens(&b"\"foo\\\"bar\""[..]).unwrap();
-        assert_eq!(
-            result,
-            vec![Token::StringLiteral("foo\"bar".to_owned()), Token::EOF]
-        );
+        let (_, result) = Lexer::lex_tokens(Span::new("\"foo\\\"bar\"")).unwrap();
+        assert_eq!(result, vec![Token::StringLiteral("foo\"bar"), Token::EOF]);
 
-        let (_, result) =
-            Lexer::lex_tokens(&b"\"foo\\\"bar with \xf0\x9f\x92\x96 emojis\""[..]).unwrap();
+        let (_, result) = Lexer::lex_tokens(Span::new("\"foo\\\"bar with 💖 emojis\"")).unwrap();
         assert_eq!(
             result,
-            vec![
-                Token::StringLiteral("foo\"bar with 💖 emojis".to_owned()),
-                Token::EOF
-            ]
+            vec![Token::StringLiteral("foo\"bar with 💖 emojis"), Token::EOF]
         );
     }
 
@@ -414,11 +405,11 @@ mod tests {
         continue
         true
         false
-        "
-        .as_bytes();
+        ";
 
+        let input = Span::new(input);
         let (rest, tokens) = Lexer::lex_tokens(input).unwrap();
-        assert_eq!(rest, b"");
+        assert_eq!(*rest.fragment(), "");
         assert_eq!(
             tokens,
             vec![

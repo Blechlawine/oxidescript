@@ -1,7 +1,7 @@
 use oxc::{
     ast::{
-        ast::{Argument, ArrayExpressionElement, Expression, Program, Statement},
         AstBuilder,
+        ast::{Argument, ArrayExpressionElement, Expression, Program, Statement},
     },
     span::{SourceType, Span},
 };
@@ -21,7 +21,7 @@ pub mod unary;
 
 use crate::{IntoOxc, JavascriptCompilerContext};
 
-impl<'c> IntoOxc<'c, Program<'c>> for oxidescript::parser::ast::Program {
+impl<'c, 'src> IntoOxc<'c, Program<'c>> for oxidescript::parser::ast::Program<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Program<'c> {
         AstBuilder::new(ctx.allocator).program(
             Span::new(0, 0),
@@ -38,7 +38,7 @@ impl<'c> IntoOxc<'c, Program<'c>> for oxidescript::parser::ast::Program {
     }
 }
 
-impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Statement {
+impl<'c, 'src> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Statement<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Statement<'c> {
         match self {
             oxidescript::parser::ast::Statement::ExpressionStatement { expression, .. } => {
@@ -129,7 +129,7 @@ impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Statement {
     }
 }
 
-impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Expression {
+impl<'c, 'src> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Expression<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
         match self {
             oxidescript::parser::ast::Expression::PathExpression(path) => path.into_oxc(ctx),
@@ -154,8 +154,8 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Expression {
     }
 }
 
-impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, ArrayExpressionElement<'c>>>
-    for Vec<oxidescript::parser::ast::Expression>
+impl<'c, 'src> IntoOxc<'c, oxc::allocator::Vec<'c, ArrayExpressionElement<'c>>>
+    for Vec<oxidescript::parser::ast::Expression<'src>>
 {
     fn into_oxc(
         self,
@@ -166,8 +166,8 @@ impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, ArrayExpressionElement<'c>>>
     }
 }
 
-impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, Argument<'c>>>
-    for Vec<oxidescript::parser::ast::Expression>
+impl<'c, 'src> IntoOxc<'c, oxc::allocator::Vec<'c, Argument<'c>>>
+    for Vec<oxidescript::parser::ast::Expression<'src>>
 {
     fn into_oxc(
         self,

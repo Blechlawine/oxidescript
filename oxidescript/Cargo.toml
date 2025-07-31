@@ -1,7 +1,7 @@
 [package]
 name = "oxidescript"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [lib]
 name = "oxidescript"
@@ -11,3 +11,4 @@ path = "src/lib.rs"
 nom = "8"
 walkdir = "2"
 similar = "2"
+nom_locate = "5"

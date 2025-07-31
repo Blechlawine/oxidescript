@@ -42,13 +42,6 @@ enum OxideCommand {
         #[arg(short, long)]
         outdir: Option<PathBuf>,
     },
-    Run {
-        #[arg(short, long)]
-        with: Option<JavascriptRuntime>,
-
-        #[arg(short, long)]
-        devdir: Option<PathBuf>,
-    },
 }
 
 #[derive(Clone, Debug, Default)]
@@ -128,21 +121,6 @@ fn main() {
             let compiled_path = outdir.join(new_file_name);
             std::fs::write(compiled_path, compiled).unwrap();
         }
-        OxideCommand::Run { with, devdir } => {
-            let devdir = devdir.as_deref().unwrap_or(DEFAULT_DEVDIR.as_ref());
-            if devdir.exists() {
-                std::fs::remove_dir_all(devdir).unwrap();
-            }
-            std::fs::create_dir_all(devdir).unwrap();
-            let with = with.unwrap_or_default();
-
-            let compiled = compile_files(&args.input, &ctx, JavascriptEnvironment::from(&with));
-            let new_file_name = format!("{}.js", args.input.file_stem().unwrap().to_str().unwrap());
-            let compiled_path = devdir.join(new_file_name);
-            std::fs::write(&compiled_path, compiled).unwrap();
-
-            with.run(&compiled_path).unwrap().wait().unwrap();
-        }
     }
 }
 
@@ -153,7 +131,7 @@ fn compile_files(path: &Path, ctx: &Context, environment: JavascriptEnvironment)
         println!("Loaded file: {:#?}", &source_tree);
     }
 
-    let lexed = Lexer::lex_source_tree(&source_tree);
+    let lexed = Lexer::tokenize(&source_tree);
     if ctx.verbose {
         println!("Lexed: {:#?}", lexed);
     }
@@ -180,7 +158,7 @@ fn compile_files(path: &Path, ctx: &Context, environment: JavascriptEnvironment)
         .collect::<HashMap<_, _>>();
 
     let errors = RefCell::new(vec![]);
-    let mut analyser = SemanticAnalyser::new(&errors);
+    // let mut analyser = SemanticAnalyser::new(&errors);
     analyser.init();
     // TODO: do i want to load the environment like this or should the user put a extern module in
     // their source code depending on what environment they want to build for?

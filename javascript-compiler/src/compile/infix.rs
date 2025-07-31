@@ -1,7 +1,7 @@
 use oxc::{
     ast::{
-        ast::{BinaryExpression, BinaryOperator, Expression, LogicalExpression, LogicalOperator},
         AstBuilder,
+        ast::{BinaryExpression, BinaryOperator, Expression, LogicalExpression, LogicalOperator},
     },
     span::Span,
 };
@@ -42,7 +42,7 @@ fn logical_expr<'c>(
     )
 }
 
-impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::InfixExpr {
+impl<'c, 'src> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::InfixExpr<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
         match self.op {
             oxidescript::parser::ast::InfixOperator::Plus => Expression::BinaryExpression(

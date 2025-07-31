@@ -25,11 +25,11 @@ pub fn parse_pratt_expression(
     parse_pratt_expression1(rest, precedence, atom)
 }
 
-fn parse_pratt_expression1(
-    input: Tokens,
+fn parse_pratt_expression1<'src>(
+    input: Tokens<'src>,
     precedence: Precedence,
-    left: Expression,
-) -> IResult<Tokens, Expression> {
+    left: Expression<'src>,
+) -> IResult<Tokens<'src>, Expression<'src>> {
     let (rest, found) = take(1usize)(input)?;
     if found.tokens.is_empty() {
         Ok((rest, left))
@@ -58,7 +58,10 @@ fn parse_pratt_expression1(
     }
 }
 
-fn parse_infix_expression(input: Tokens, left: Expression) -> IResult<Tokens, Expression> {
+fn parse_infix_expression<'src>(
+    input: Tokens<'src>,
+    left: Expression<'src>,
+) -> IResult<Tokens<'src>, Expression<'src>> {
     let (rest, operator) = take(1usize)(input)?;
     if operator.tokens.is_empty() {
         Err(Err::Error(error_position!(input, ErrorKind::Tag)))
@@ -82,10 +85,10 @@ fn parse_infix_expression(input: Tokens, left: Expression) -> IResult<Tokens, Ex
     }
 }
 
-fn parse_pratt_member_access_expression(
-    input: Tokens,
-    left: Expression,
-) -> IResult<Tokens, Expression> {
+fn parse_pratt_member_access_expression<'src>(
+    input: Tokens<'src>,
+    left: Expression<'src>,
+) -> IResult<Tokens<'src>, Expression<'src>> {
     map((period_tag, parse_identifier), |(_, right)| {
         Expression::MemberAccessExpression(MemberAccessExpr {
             lhs: Box::new(left.clone()),
@@ -95,7 +98,10 @@ fn parse_pratt_member_access_expression(
     .parse(input)
 }
 
-fn parse_pratt_call_expression(input: Tokens, left: Expression) -> IResult<Tokens, Expression> {
+fn parse_pratt_call_expression<'src>(
+    input: Tokens<'src>,
+    left: Expression<'src>,
+) -> IResult<Tokens<'src>, Expression<'src>> {
     map(
         delimited(l_paren_tag, opt(parse_expressions), r_paren_tag),
         |args| {
@@ -108,7 +114,10 @@ fn parse_pratt_call_expression(input: Tokens, left: Expression) -> IResult<Token
     .parse(input)
 }
 
-fn parse_pratt_index_expression(input: Tokens, left: Expression) -> IResult<Tokens, Expression> {
+fn parse_pratt_index_expression<'src>(
+    input: Tokens<'src>,
+    left: Expression<'src>,
+) -> IResult<Tokens<'src>, Expression<'src>> {
     map(
         delimited(l_bracket_tag, parse_expression, r_bracket_tag),
         |index_expr| {

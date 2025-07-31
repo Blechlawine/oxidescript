@@ -1,31 +1,31 @@
 use std::{fmt::Display, num::ParseFloatError};
 
-use crate::resolver::SymbolId;
+use crate::symbols::SymbolId;
 
-pub type Program = Vec<Statement>;
+pub type Program<'src> = Vec<Statement<'src>>;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub enum ModuleDeclaration {
+pub enum ModuleDeclaration<'src> {
     Extern {
-        path: Path,
-        content: Program,
+        path: Path<'src>,
+        content: Program<'src>,
     },
     Intern {
-        path: Path,
+        path: Path<'src>,
         /// this is None for modules in separate files, only being populated with semantic analysis
-        content: Option<Program>,
+        content: Option<Program<'src>>,
     },
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Path {
-    pub elements: Vec<IdentifierReference>,
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+pub struct Path<'src> {
+    pub elements: Vec<IdentifierReference<'src>>,
     /// this path is populated in semantic analysis
-    pub full_path: Option<Vec<Identifier>>,
+    pub full_path: Option<Vec<Identifier<'src>>>,
 }
 
-impl Path {
-    pub fn new(elements: Vec<IdentifierReference>) -> Self {
+impl<'src> Path<'src> {
+    pub fn new(elements: Vec<IdentifierReference<'src>>) -> Self {
         Self {
             elements,
             full_path: None,
@@ -40,7 +40,7 @@ impl Path {
         self.elements.is_empty()
     }
 
-    pub fn join(&self, other: &Path) -> Path {
+    pub fn join(&self, other: &Path<'src>) -> Path<'src> {
         let mut elements = self.elements.clone();
         elements.extend(other.elements.clone());
         Path {
@@ -50,7 +50,7 @@ impl Path {
     }
 }
 
-impl Display for Path {
+impl Display for Path<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for element in &self.elements {
             f.write_str("::")?;
@@ -60,23 +60,8 @@ impl Display for Path {
     }
 }
 
-impl<T> From<T> for Path
-where
-    T: Into<String>,
-{
-    fn from(value: T) -> Self {
-        Self {
-            elements: vec![IdentifierReference {
-                name: value.into(),
-                id: None,
-            }],
-            full_path: None,
-        }
-    }
-}
-
-impl From<IdentifierReference> for Path {
-    fn from(value: IdentifierReference) -> Self {
+impl<'src> From<IdentifierReference<'src>> for Path<'src> {
+    fn from(value: IdentifierReference<'src>) -> Self {
         Self {
             elements: vec![value],
             full_path: None,
@@ -85,142 +70,142 @@ impl From<IdentifierReference> for Path {
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Use {
-    pub path: Path,
-    pub resolved_module: Option<Path>,
-    pub imported: Option<Imported>,
+pub struct Use<'src> {
+    pub path: Path<'src>,
+    pub resolved_module: Option<Path<'src>>,
+    pub imported: Option<Imported<'src>>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub enum Imported {
-    Module(IdentifierReference),
-    Name(IdentifierReference),
+pub enum Imported<'src> {
+    Module(IdentifierReference<'src>),
+    Name(IdentifierReference<'src>),
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub enum Statement {
+pub enum Statement<'src> {
     ExpressionStatement {
-        expression: Expression,
+        expression: Expression<'src>,
         has_semicolon: bool,
     },
-    DeclarationStatement(Declaration),
+    DeclarationStatement(Declaration<'src>),
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub enum Expression {
-    PathExpression(Path),
+pub enum Expression<'src> {
+    PathExpression(Path<'src>),
     LiteralExpression(Literal),
-    UnaryExpression(UnaryExpr),
-    InfixExpression(InfixExpr),
-    ArrayExpression(Vec<Expression>),
-    IfExpression(IfExpr),
-    ForExpression(ForExpr),
+    UnaryExpression(UnaryExpr<'src>),
+    InfixExpression(InfixExpr<'src>),
+    ArrayExpression(Vec<Expression<'src>>),
+    IfExpression(IfExpr<'src>),
+    ForExpression(ForExpr<'src>),
     // MatchExpression(MatchExpr), // TODO
-    BlockExpression(Box<Block>),
-    CallExpression(CallExpr),
-    IndexExpression(IndexExpr),
-    MemberAccessExpression(MemberAccessExpr),
+    BlockExpression(Box<Block<'src>>),
+    CallExpression(CallExpr<'src>),
+    IndexExpression(IndexExpr<'src>),
+    MemberAccessExpression(MemberAccessExpr<'src>),
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct ForExpr {
-    pub lhs: Identifier,
-    pub rhs: Box<Expression>,
-    pub body: Box<Block>,
+pub struct ForExpr<'src> {
+    pub lhs: Identifier<'src>,
+    pub rhs: Box<Expression<'src>>,
+    pub body: Box<Block<'src>>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct MemberAccessExpr {
-    pub lhs: Box<Expression>,
-    pub ident: Identifier,
+pub struct MemberAccessExpr<'src> {
+    pub lhs: Box<Expression<'src>>,
+    pub ident: Identifier<'src>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct IndexExpr {
-    pub lhs: Box<Expression>,
-    pub index: Box<Expression>,
+pub struct IndexExpr<'src> {
+    pub lhs: Box<Expression<'src>>,
+    pub index: Box<Expression<'src>>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct CallExpr {
-    pub lhs: Box<Expression>,
-    pub arguments: Vec<Expression>,
+pub struct CallExpr<'src> {
+    pub lhs: Box<Expression<'src>>,
+    pub arguments: Vec<Expression<'src>>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct UnaryExpr {
+pub struct UnaryExpr<'src> {
     pub op: UnaryOperator,
-    pub rhs: Box<Expression>,
+    pub rhs: Box<Expression<'src>>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct InfixExpr {
+pub struct InfixExpr<'src> {
     pub op: InfixOperator,
-    pub lhs: Box<Expression>,
-    pub rhs: Box<Expression>,
+    pub lhs: Box<Expression<'src>>,
+    pub rhs: Box<Expression<'src>>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub enum Declaration {
-    ConstDeclaration(Identifier, Expression),
-    LetDeclaration(Identifier, Expression),
-    FunctionDeclaration(FunctionDecl),
-    StructDeclaration(StructDecl),
-    ModDeclaration(ModuleDeclaration),
-    UseDeclaration(Use),
+pub enum Declaration<'src> {
+    ConstDeclaration(Identifier<'src>, Expression<'src>),
+    LetDeclaration(Identifier<'src>, Expression<'src>),
+    FunctionDeclaration(FunctionDecl<'src>),
+    StructDeclaration(StructDecl<'src>),
+    ModDeclaration(ModuleDeclaration<'src>),
+    UseDeclaration(Use<'src>),
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct FunctionDecl {
-    pub name: Identifier,
-    pub parameters: Vec<Parameter>,
-    pub return_type: Option<TypeExpression>,
-    pub body: Option<Block>,
+pub struct FunctionDecl<'src> {
+    pub name: Identifier<'src>,
+    pub parameters: Vec<Parameter<'src>>,
+    pub return_type: Option<TypeExpression<'src>>,
+    pub body: Option<Block<'src>>,
     /// if the function actually has logic defined, or if it is just a declaration (fn(arg: ...);)
     pub has_body: bool,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct StructDecl {
-    pub ident: Identifier,
-    pub fields: Vec<StructField>,
+pub struct StructDecl<'src> {
+    pub ident: Identifier<'src>,
+    pub fields: Vec<StructField<'src>>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct StructField {
-    pub ident: Identifier,
-    pub r#type: TypeExpression,
+pub struct StructField<'src> {
+    pub ident: Identifier<'src>,
+    pub r#type: TypeExpression<'src>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub enum TypeExpression {
-    Path(Path),
+pub enum TypeExpression<'src> {
+    Path(Path<'src>),
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct IfExpr {
-    pub condition: Box<Expression>,
-    pub then_block: Box<Block>,
-    pub else_if_blocks: Vec<ElseIfExpr>,
-    pub else_block: Option<Box<Block>>,
+pub struct IfExpr<'src> {
+    pub condition: Box<Expression<'src>>,
+    pub then_block: Box<Block<'src>>,
+    pub else_if_blocks: Vec<ElseIfExpr<'src>>,
+    pub else_block: Option<Box<Block<'src>>>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct ElseIfExpr {
-    pub condition: Box<Expression>,
-    pub then_block: Block,
+pub struct ElseIfExpr<'src> {
+    pub condition: Box<Expression<'src>>,
+    pub then_block: Block<'src>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Block {
-    pub statements: Vec<Statement>,
-    pub return_value: Option<Expression>,
+pub struct Block<'src> {
+    pub statements: Vec<Statement<'src>>,
+    pub return_value: Option<Expression<'src>>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Parameter {
-    pub name: Identifier,
-    pub r#type: TypeExpression,
+pub struct Parameter<'src> {
+    pub name: Identifier<'src>,
+    pub r#type: TypeExpression<'src>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -322,14 +307,14 @@ impl Display for InfixOperator {
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
-pub struct Identifier {
-    pub name: String,
+pub struct Identifier<'src> {
+    pub name: &'src str,
     pub id: Option<SymbolId>,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub struct IdentifierReference {
-    pub name: String,
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+pub struct IdentifierReference<'src> {
+    pub name: &'src str,
     pub id: Option<SymbolId>,
 }
 

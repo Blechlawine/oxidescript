@@ -1,14 +1,14 @@
 use oxc::{
     ast::{
-        ast::{Expression, Statement},
         AstBuilder,
+        ast::{Expression, Statement},
     },
     span::Span,
 };
 
 use crate::{IntoOxc, JavascriptCompilerContext};
 
-impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::IfExpr {
+impl<'c, 'src> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::IfExpr<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
         ctx.iife(oxc::allocator::Vec::from_iter_in(
             [self.into_oxc(ctx)],
@@ -17,7 +17,7 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::IfExpr {
     }
 }
 
-impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::IfExpr {
+impl<'c, 'src> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::IfExpr<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Statement<'c> {
         AstBuilder::new(ctx.allocator).statement_if(
             Span::new(0, 0),

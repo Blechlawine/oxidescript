@@ -1,12 +1,12 @@
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Token {
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Token<'src> {
     Illegal,
     EOF,
 
-    Ident(String),
+    Ident(&'src str),
     // Literals
-    StringLiteral(String),
-    NumberLiteral(String), // why not f64? because we can't Eq f64s
+    StringLiteral(&'src str),
+    NumberLiteral(&'src str),
     BooleanLiteral(bool),
 
     // Operators

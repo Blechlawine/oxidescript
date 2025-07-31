@@ -1,28 +1,20 @@
 use crate::{
     parser::ast::{Identifier, Program, StructDecl},
-    resolver::Scope,
+    types::VariableType,
 };
 
-use super::type_checker::VariableType;
-
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Symbol {
-    pub scope: Scope,
-    pub inner: SymbolInner,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum SymbolInner {
-    Module(ModuleSymbol),
-    Type(TypeSymbol),
+pub enum SymbolInner<'src> {
+    Module(ModuleSymbol<'src>),
+    Type(TypeSymbol<'src>),
     Function(FunctionSymbol),
-    Variable(VariableSymbol),
+    Variable(VariableSymbol<'src>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum ModuleSymbol {
-    Extern { ast: Program },
-    Intern { ast: Option<Program> },
+pub enum ModuleSymbol<'src> {
+    Extern { ast: Program<'src> },
+    Intern { ast: Option<Program<'src>> },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -31,12 +23,12 @@ pub struct FunctionSymbol {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct VariableSymbol {
+pub struct VariableSymbol<'src> {
     pub r#type: Option<VariableType>,
-    pub name: Identifier,
+    pub name: Identifier<'src>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum TypeSymbol {
-    Struct(StructDecl),
+pub enum TypeSymbol<'src> {
+    Struct(StructDecl<'src>),
 }

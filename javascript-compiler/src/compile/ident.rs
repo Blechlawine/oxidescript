@@ -1,17 +1,17 @@
 use oxc::{
     ast::{
+        AstBuilder,
         ast::{
             BindingIdentifier, BindingPattern, Expression, ForStatementLeft, IdentifierName,
             IdentifierReference, VariableDeclarator,
         },
-        AstBuilder,
     },
     span::Span,
 };
 
 use crate::{IntoOxc, JavascriptCompilerContext};
 
-impl<'c> IntoOxc<'c, BindingPattern<'c>> for oxidescript::parser::ast::Identifier {
+impl<'c, 'src> IntoOxc<'c, BindingPattern<'c>> for oxidescript::parser::ast::Identifier<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> BindingPattern<'c> {
         BindingPattern {
             kind: oxc::ast::ast::BindingPatternKind::BindingIdentifier(
@@ -23,7 +23,7 @@ impl<'c> IntoOxc<'c, BindingPattern<'c>> for oxidescript::parser::ast::Identifie
     }
 }
 
-impl<'c> IntoOxc<'c, BindingIdentifier<'c>> for oxidescript::parser::ast::Identifier {
+impl<'c, 'src> IntoOxc<'c, BindingIdentifier<'c>> for oxidescript::parser::ast::Identifier<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> BindingIdentifier<'c> {
         let name = AstBuilder::new(ctx.allocator).atom(&self.name.clone());
         BindingIdentifier {
@@ -34,26 +34,26 @@ impl<'c> IntoOxc<'c, BindingIdentifier<'c>> for oxidescript::parser::ast::Identi
     }
 }
 
-impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Identifier {
+impl<'c, 'src> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Identifier<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
         let name = AstBuilder::new(ctx.allocator).atom(&self.name.clone());
         AstBuilder::new(ctx.allocator).expression_identifier_reference(Span::new(0, 0), name)
     }
 }
 
-impl<'c> IntoOxc<'c, IdentifierReference<'c>> for oxidescript::parser::ast::Identifier {
+impl<'c, 'src> IntoOxc<'c, IdentifierReference<'c>> for oxidescript::parser::ast::Identifier<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> IdentifierReference<'c> {
         AstBuilder::new(ctx.allocator).identifier_reference(Span::new(0, 0), self.name)
     }
 }
 
-impl<'c> IntoOxc<'c, IdentifierName<'c>> for oxidescript::parser::ast::Identifier {
+impl<'c, 'src> IntoOxc<'c, IdentifierName<'c>> for oxidescript::parser::ast::Identifier<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> IdentifierName<'c> {
         AstBuilder::new(ctx.allocator).identifier_name(Span::new(0, 0), self.name)
     }
 }
 
-impl<'c> IntoOxc<'c, ForStatementLeft<'c>> for oxidescript::parser::ast::Identifier {
+impl<'c, 'src> IntoOxc<'c, ForStatementLeft<'c>> for oxidescript::parser::ast::Identifier<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> ForStatementLeft<'c> {
         ForStatementLeft::VariableDeclaration(oxc::allocator::Box::new_in(
             oxc::ast::ast::VariableDeclaration {

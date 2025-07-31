@@ -1,38 +1,21 @@
-use std::collections::HashMap;
+use std::cell::RefCell;
 
-use module_resolver::SymbolsResolver;
-use symbols::{ModuleSymbol, Symbol, SymbolInner};
-use type_checker::VariableType;
-
-use crate::{parser::ast::Program, resolver::SymbolId};
+use crate::{
+    parser::ast::{Declaration, Expression, Program, Statement},
+    resolver::Resolver,
+    scope::{ParentScopes, Scope},
+    symbols::SymbolTable,
+};
 
 pub mod declaration;
 pub mod expression;
-pub mod module_resolver;
 pub mod modules;
 pub mod program;
 pub mod symbols;
-pub mod type_checker;
 
 #[derive(Debug)]
 pub enum CheckError {
     WrongType,
-}
-
-pub trait AstNode {
-    fn visit(&mut self, visitor: &mut dyn AstVisitor);
-    fn check_type(&self, ctx: &TypeChecker) -> VariableType;
-}
-
-pub trait AstVisitor {}
-
-struct TypeChecker<'s> {
-    symbols: &'s SymbolTable,
-}
-
-#[derive(Debug, Default)]
-struct SymbolTable {
-    symbols: HashMap<SymbolId, Symbol>,
 }
 
 // 1. resolve modules and lex and parse them and include them in the ast, or if they have
@@ -40,6 +23,77 @@ struct SymbolTable {
 // 2. check types
 // 3. check for unused things, and remove them from the ast
 pub struct SemanticAnalyser {}
+
+pub struct Checker<'src> {
+    scopes: ParentScopes,
+    symbols: SymbolTable<'src>,
+    errors: RefCell<Vec<CheckError>>,
+}
+
+impl<'src> Checker<'src> {
+    pub fn new(resolver: Resolver<'src>) -> Self {
+        Self {
+            scopes: resolver.scopes,
+            symbols: resolver.symbols,
+            errors: RefCell::new(vec![]),
+        }
+    }
+
+    pub fn check_program(&self, program: Program) -> Result<(), Vec<CheckError>> {
+        let scope = self.scopes.global_scope();
+        let _ = self.check_vec_of_statements(program, scope);
+        if self.errors.borrow().is_empty() {
+            Ok(())
+        } else {
+            Err(self.errors.replace(Vec::new()))
+        }
+    }
+
+    fn check_vec_of_statements(&self, statements: Vec<Statement>, scope: Scope) -> Result<(), ()> {
+        for statement in statements {
+            self.check_statement(statement, scope)?;
+        }
+        Ok(())
+    }
+
+    fn check_statement(&self, statement: Statement, scope: Scope) -> Result<(), ()> {
+        match statement {
+            Statement::ExpressionStatement { expression, .. } => {
+                self.check_expression(expression, scope)
+            }
+            Statement::DeclarationStatement(declaration) => {
+                self.check_declaration(declaration, scope)
+            }
+        }
+    }
+
+    fn check_expression(&self, expression: Expression, scope: Scope) -> Result<(), ()> {
+        match expression {
+            Expression::PathExpression(path) => todo!(),
+            Expression::LiteralExpression(literal) => todo!(),
+            Expression::UnaryExpression(unary_expr) => todo!(),
+            Expression::InfixExpression(infix_expr) => todo!(),
+            Expression::ArrayExpression(expressions) => todo!(),
+            Expression::IfExpression(if_expr) => todo!(),
+            Expression::ForExpression(for_expr) => todo!(),
+            Expression::BlockExpression(block) => todo!(),
+            Expression::CallExpression(call_expr) => todo!(),
+            Expression::IndexExpression(index_expr) => todo!(),
+            Expression::MemberAccessExpression(member_access_expr) => todo!(),
+        }
+    }
+
+    fn check_declaration(&self, declaration: Declaration, scope: Scope) -> Result<(), ()> {
+        match declaration {
+            Declaration::ConstDeclaration(identifier, expression) => todo!(),
+            Declaration::LetDeclaration(identifier, expression) => todo!(),
+            Declaration::FunctionDeclaration(function_decl) => todo!(),
+            Declaration::StructDeclaration(struct_decl) => todo!(),
+            Declaration::ModDeclaration(module_declaration) => todo!(),
+            Declaration::UseDeclaration(_) => todo!(),
+        }
+    }
+}
 
 // #[cfg(test)]
 // mod tests {

@@ -1,11 +1,11 @@
 use oxc::{
-    ast::{ast::Expression, AstBuilder},
+    ast::{AstBuilder, ast::Expression},
     span::Span,
 };
 
 use crate::IntoOxc;
 
-impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::IndexExpr {
+impl<'c, 'src> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::IndexExpr<'src> {
     fn into_oxc(self, ctx: &'c crate::JavascriptCompilerContext<'c>) -> Expression<'c> {
         AstBuilder::new(ctx.allocator)
             .member_expression_computed(

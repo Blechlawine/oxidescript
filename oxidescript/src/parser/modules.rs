@@ -10,8 +10,8 @@ use crate::lexer::{token::Token, tokens::Tokens};
 
 use super::{
     ast::{ModuleDeclaration, Path, Statement, Use},
-    colon_tag, extern_tag, l_squirly_tag, mod_tag, parse_identifier, parse_identifier_reference,
-    r_squirly_tag, semicolon_tag,
+    colon_tag, extern_tag, l_squirly_tag, mod_tag, parse_identifier_reference, r_squirly_tag,
+    semicolon_tag,
     statement::parse_statement,
     use_tag,
 };

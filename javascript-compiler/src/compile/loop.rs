@@ -1,10 +1,10 @@
 use oxc::ast::ast::{Expression, Statement};
 use oxidescript::parser::ast::ForExpr;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{Rng, distributions::Alphanumeric};
 
 use crate::IntoOxc;
 
-impl<'c> IntoOxc<'c, Expression<'c>> for ForExpr {
+impl<'c, 'src> IntoOxc<'c, Expression<'c>> for ForExpr<'src> {
     fn into_oxc(self, ctx: &'c crate::JavascriptCompilerContext<'c>) -> Expression<'c> {
         let has_output = self.body.return_value.is_some();
         if has_output {
@@ -18,7 +18,7 @@ impl<'c> IntoOxc<'c, Expression<'c>> for ForExpr {
                     ctx.expr_call(
                         ctx.member_access(
                             oxidescript::parser::ast::Identifier {
-                                name: output_id.clone(),
+                                name: &output_id,
                                 id: None,
                             }
                             .into_oxc(ctx),
@@ -42,7 +42,7 @@ impl<'c> IntoOxc<'c, Expression<'c>> for ForExpr {
                     oxc::ast::ast::Statement::VariableDeclaration(oxc::allocator::Box::new_in(
                         ctx.r#let(
                             oxidescript::parser::ast::Identifier {
-                                name: output_id.clone(),
+                                name: &output_id,
                                 id: None,
                             }
                             .into_oxc(ctx),
@@ -53,7 +53,7 @@ impl<'c> IntoOxc<'c, Expression<'c>> for ForExpr {
                     r#loop,
                     ctx.r#return(Some(
                         oxidescript::parser::ast::Identifier {
-                            name: output_id,
+                            name: &output_id,
                             id: None,
                         }
                         .into_oxc(ctx),
@@ -62,12 +62,14 @@ impl<'c> IntoOxc<'c, Expression<'c>> for ForExpr {
                 ctx.allocator,
             ))
         } else {
-            todo!("for loop without return_value in body can't be compiled to expression, only statement");
+            todo!(
+                "for loop without return_value in body can't be compiled to expression, only statement"
+            );
         }
     }
 }
 
-impl<'c> IntoOxc<'c, Statement<'c>> for ForExpr {
+impl<'c, 'src> IntoOxc<'c, Statement<'c>> for ForExpr<'src> {
     fn into_oxc(self, ctx: &'c crate::JavascriptCompilerContext<'c>) -> Statement<'c> {
         ctx.for_of(
             self.lhs.into_oxc(ctx),

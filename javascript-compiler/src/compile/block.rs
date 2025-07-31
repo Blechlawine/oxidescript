@@ -1,17 +1,17 @@
 use oxc::{
     ast::{
+        AstBuilder,
         ast::{
             BindingRestElement, Expression, FunctionBody, Statement, TSTypeAnnotation,
             TSTypeParameterDeclaration, TSTypeParameterInstantiation,
         },
-        AstBuilder,
     },
     span::Span,
 };
 
 use crate::{IntoOxc, JavascriptCompilerContext};
 
-impl<'c> IntoOxc<'c, FunctionBody<'c>> for oxidescript::parser::ast::Block {
+impl<'c, 'src> IntoOxc<'c, FunctionBody<'c>> for oxidescript::parser::ast::Block<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> FunctionBody<'c> {
         AstBuilder::new(ctx.allocator).function_body(
             Span::new(0, 0),
@@ -21,7 +21,9 @@ impl<'c> IntoOxc<'c, FunctionBody<'c>> for oxidescript::parser::ast::Block {
     }
 }
 
-impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, Statement<'c>>> for oxidescript::parser::ast::Block {
+impl<'c, 'src> IntoOxc<'c, oxc::allocator::Vec<'c, Statement<'c>>>
+    for oxidescript::parser::ast::Block<'src>
+{
     fn into_oxc(
         self,
         ctx: &'c JavascriptCompilerContext<'c>,
@@ -42,7 +44,7 @@ impl<'c> IntoOxc<'c, oxc::allocator::Vec<'c, Statement<'c>>> for oxidescript::pa
     }
 }
 
-impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Block {
+impl<'c, 'src> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Block<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
         let callee = AstBuilder::new(ctx.allocator).expression_arrow_function(
             Span::new(0, 0),
@@ -68,7 +70,7 @@ impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::Block {
     }
 }
 
-impl<'c> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Block {
+impl<'c, 'src> IntoOxc<'c, Statement<'c>> for oxidescript::parser::ast::Block<'src> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Statement<'c> {
         AstBuilder::new(ctx.allocator).statement_block(Span::new(0, 0), self.into_oxc(ctx))
     }

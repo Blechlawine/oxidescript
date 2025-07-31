@@ -1,14 +1,14 @@
 use oxc::{
     ast::{
-        ast::{Expression, UnaryOperator},
         AstBuilder,
+        ast::{Expression, UnaryOperator},
     },
     span::Span,
 };
 
 use crate::{IntoOxc, JavascriptCompilerContext};
 
-impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::UnaryExpr {
+impl<'c> IntoOxc<'c, Expression<'c>> for oxidescript::parser::ast::UnaryExpr<'_> {
     fn into_oxc(self, ctx: &'c JavascriptCompilerContext<'c>) -> Expression<'c> {
         AstBuilder::new(ctx.allocator).expression_unary(
             Span::new(0, 0),

@@ -1,6 +1,10 @@
 pub mod checker;
 pub mod compiler;
+pub mod error;
 pub mod lexer;
 pub mod loader;
 pub mod parser;
 pub mod resolver;
+pub mod scope;
+pub mod symbols;
+pub mod types;

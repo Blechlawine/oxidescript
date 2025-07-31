@@ -1,10 +1,8 @@
 use oxidescript::{
-    checker::{AstNode, SemanticAnalyser},
-    lexer::{tokens::Tokens, Lexer},
+    checker::SemanticAnalyser,
+    lexer::{Lexer, Span, tokens::Tokens},
     parser::Parser,
 };
-
-use crate::JavascriptRuntime;
 
 #[derive(Clone, Debug, Default)]
 pub enum JavascriptEnvironment {
@@ -30,10 +28,11 @@ impl JavascriptEnvironment {
             }
         };
 
-        let (unlexed, tokens) = Lexer::lex_tokens(env_file.as_bytes()).unwrap();
+        let (unlexed, tokens) = Lexer::lex_tokens(Span::new(env_file)).unwrap();
         assert!(unlexed.is_empty());
         let (unparsed, ast) = Parser::parse(Tokens::new(&tokens)).unwrap();
         assert!(unparsed.tokens.is_empty());
-        ast.check_type(ctx);
+        // ast.check_type(ctx);
+        todo!()
     }
 }

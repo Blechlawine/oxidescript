@@ -9,19 +9,21 @@ pub mod statement;
 pub mod r#type;
 
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 use ast::IdentifierReference;
+use ast::Path;
+use nom::Err;
+use nom::Parser as _;
 use nom::bytes::complete::take;
 use nom::combinator::map;
 use nom::error::{Error, ErrorKind};
 use nom::multi::many0;
-use nom::Err;
-use nom::Parser as _;
-use nom::{sequence::terminated, IResult};
+use nom::{IResult, sequence::terminated};
 
 use crate::lexer::token::Token;
 use crate::lexer::tokens::Tokens;
+use crate::loader::LexedSourceTree;
+use crate::loader::ParsedSourceTree;
 
 use self::ast::{Identifier, Literal, Number, NumberBase, Program};
 use self::atoms::*;
@@ -62,14 +64,14 @@ fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
                 };
                 Ok((rest, Literal::NumberLiteral(parsed)))
             }
-            Token::StringLiteral(val) => Ok((rest, Literal::StringLiteral(val))),
+            Token::StringLiteral(val) => Ok((rest, Literal::StringLiteral(val.to_string()))),
             Token::BooleanLiteral(val) => Ok((rest, Literal::BooleanLiteral(val))),
             _ => Err(Err::Error(Error::new(input, ErrorKind::Tag))),
         }
     }
 }
 
-fn parse_ident_name(input: Tokens) -> IResult<Tokens, String> {
+fn parse_ident_name(input: Tokens) -> IResult<Tokens, &str> {
     let (rest, found) = take(1usize)(input)?;
     // dbg!(rest, found, input);
     if found.tokens.is_empty() {
@@ -102,12 +104,20 @@ fn parse_program(input: Tokens) -> IResult<Tokens, Program> {
 pub struct Parser;
 
 impl Parser {
-    pub fn parse_tree<'s>(
-        tree: &'s HashMap<&'s PathBuf, Tokens<'s>>,
-    ) -> HashMap<&'s PathBuf, IResult<Tokens<'s>, Program>> {
+    pub fn parse_tree<'src>(tree: LexedSourceTree<'src>) -> ParsedSourceTree<'src> {
         let mut output = HashMap::new();
         for (path, source) in tree {
-            output.insert(*path, Parser::parse(*source));
+            let tokens = Tokens::new(&source);
+            let path = path
+                .into_iter()
+                .map(|p| {
+                    let p = Tokens::new(&[p]);
+                    let (_, parsed) = parse_identifier_reference(p).unwrap();
+                    parsed
+                })
+                .collect::<Vec<_>>();
+            let (_rest, parsed) = Parser::parse(tokens).unwrap();
+            output.insert(Path::new(path), parsed);
         }
         output
     }
@@ -130,7 +140,8 @@ mod tests {
     };
     use crate::lexer::*;
 
-    fn assert_input_with_program(input: &[u8], expected_results: Program) {
+    fn assert_input_with_program(input: &str, expected_results: Program) {
+        let input = Span::new(input);
         let (_, r) = Lexer::lex_tokens(input).unwrap();
         let tokens = Tokens::new(&r);
         let (_, result) = Parser::parse(tokens).unwrap();
@@ -139,19 +150,18 @@ mod tests {
 
     #[test]
     fn empty() {
-        assert_input_with_program(b"", vec![]);
+        assert_input_with_program("", vec![]);
     }
 
     #[test]
     fn declaration_statement() {
         let input = "
             let test = 5;\
-        "
-        .as_bytes();
+        ";
         let program: Program = vec![Statement::DeclarationStatement(
             Declaration::LetDeclaration(
                 Identifier {
-                    name: "test".to_string(),
+                    name: "test",
                     id: None,
                 },
                 Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
@@ -170,13 +180,12 @@ mod tests {
             const stuff = 12;\
             let things = true;\
             const foo = \"bar\";\
-        "
-        .as_bytes();
+        ";
 
         let program: Program = vec![
             Statement::DeclarationStatement(Declaration::LetDeclaration(
                 Identifier {
-                    name: "test".to_string(),
+                    name: "test",
                     id: None,
                 },
                 Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
@@ -186,7 +195,7 @@ mod tests {
             )),
             Statement::DeclarationStatement(Declaration::ConstDeclaration(
                 Identifier {
-                    name: "stuff".to_string(),
+                    name: "stuff",
                     id: None,
                 },
                 Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
@@ -196,14 +205,14 @@ mod tests {
             )),
             Statement::DeclarationStatement(Declaration::LetDeclaration(
                 Identifier {
-                    name: "things".to_string(),
+                    name: "things",
                     id: None,
                 },
                 Expression::LiteralExpression(Literal::BooleanLiteral(true)),
             )),
             Statement::DeclarationStatement(Declaration::ConstDeclaration(
                 Identifier {
-                    name: "foo".to_string(),
+                    name: "foo",
                     id: None,
                 },
                 Expression::LiteralExpression(Literal::StringLiteral("bar".to_string())),
@@ -219,13 +228,12 @@ mod tests {
             fn test() {\
                 let variable = 5;\
             }\
-        "
-        .as_bytes();
+        ";
 
         let program: Program = vec![Statement::DeclarationStatement(
             Declaration::FunctionDeclaration(FunctionDecl {
                 name: Identifier {
-                    name: "test".to_string(),
+                    name: "test",
                     id: None,
                 },
                 parameters: vec![],
@@ -233,7 +241,7 @@ mod tests {
                     statements: vec![Statement::DeclarationStatement(
                         Declaration::LetDeclaration(
                             Identifier {
-                                name: "variable".to_string(),
+                                name: "variable",
                                 id: None,
                             },
                             Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
@@ -254,12 +262,12 @@ mod tests {
 
     #[test]
     fn infix_expression() {
-        let input = "let foo = 5 - 10 * 2;".as_bytes();
+        let input = "let foo = 5 - 10 * 2;";
 
         let program: Program = vec![Statement::DeclarationStatement(
             Declaration::LetDeclaration(
                 Identifier {
-                    name: "foo".to_string(),
+                    name: "foo",
                     id: None,
                 },
                 Expression::InfixExpression(InfixExpr {
@@ -298,12 +306,11 @@ mod tests {
             fn test() -> Number {\
                 5 - 10\
             }\
-        "
-        .as_bytes();
+        ";
         let program: Program = vec![Statement::DeclarationStatement(
             Declaration::FunctionDeclaration(FunctionDecl {
                 name: Identifier {
-                    name: "test".to_string(),
+                    name: "test",
                     id: None,
                 },
                 parameters: vec![],
@@ -326,7 +333,7 @@ mod tests {
                     })),
                 }),
                 return_type: Some(TypeExpression::Path(Path::from(IdentifierReference {
-                    name: "Number".to_string(),
+                    name: "Number",
                     id: None,
                 }))),
                 has_body: true,
@@ -348,7 +355,7 @@ mod tests {
                 expression: Expression::IndexExpression(IndexExpr {
                     lhs: Box::new(Expression::PathExpression(Path::from(
                         IdentifierReference {
-                            name: "array".to_string(),
+                            name: "array",
                             id: None,
                         },
                     ))),
@@ -365,7 +372,7 @@ mod tests {
                 expression: Expression::IndexExpression(IndexExpr {
                     lhs: Box::new(Expression::PathExpression(Path::from(
                         IdentifierReference {
-                            name: "array".to_string(),
+                            name: "array",
                             id: None,
                         },
                     ))),
@@ -389,18 +396,18 @@ mod tests {
             },
         ];
 
-        assert_input_with_program(input.as_bytes(), program);
+        assert_input_with_program(input, program);
     }
 
     #[test]
     fn call_expression() {
-        let input = "foo(20, 30 - 2);".as_bytes();
+        let input = "foo(20, 30 - 2);";
 
         let program: Program = vec![Statement::ExpressionStatement {
             expression: Expression::CallExpression(CallExpr {
                 lhs: Box::new(Expression::PathExpression(Path::from(
                     IdentifierReference {
-                        name: "foo".to_string(),
+                        name: "foo",
                         id: None,
                     },
                 ))),
@@ -462,7 +469,7 @@ mod tests {
             has_semicolon: false,
         }];
 
-        assert_input_with_program(input.as_bytes(), program);
+        assert_input_with_program(input, program);
     }
 
     #[test]
@@ -517,7 +524,7 @@ mod tests {
             }),
             has_semicolon: true,
         }];
-        assert_input_with_program(input.as_bytes(), program);
+        assert_input_with_program(input, program);
     }
 
     #[test]
@@ -536,7 +543,7 @@ mod tests {
         let program: Program = vec![
             Statement::DeclarationStatement(Declaration::FunctionDeclaration(FunctionDecl {
                 name: Identifier {
-                    name: "test".to_string(),
+                    name: "test",
                     id: None,
                 },
                 parameters: vec![],
@@ -573,7 +580,7 @@ mod tests {
                                 rhs: Box::new(Expression::CallExpression(CallExpr {
                                     lhs: Box::new(Expression::PathExpression(Path::from(
                                         IdentifierReference {
-                                            name: "foo".to_string(),
+                                            name: "foo",
                                             id: None,
                                         },
                                     ))),
@@ -606,7 +613,7 @@ mod tests {
                         },
                         Statement::DeclarationStatement(Declaration::LetDeclaration(
                             Identifier {
-                                name: "variable".to_string(),
+                                name: "variable",
                                 id: None,
                             },
                             Expression::LiteralExpression(Literal::NumberLiteral(Number::I {
@@ -617,7 +624,7 @@ mod tests {
                     ],
                     return_value: Some(Expression::PathExpression(Path::from(
                         IdentifierReference {
-                            name: "variable".to_string(),
+                            name: "variable",
                             id: None,
                         },
                     ))),
@@ -628,7 +635,7 @@ mod tests {
                 expression: Expression::CallExpression(CallExpr {
                     lhs: Box::new(Expression::PathExpression(Path::from(
                         IdentifierReference {
-                            name: "test".to_string(),
+                            name: "test",
                             id: None,
                         },
                     ))),
@@ -660,7 +667,7 @@ mod tests {
                 expression: Expression::IndexExpression(IndexExpr {
                     lhs: Box::new(Expression::PathExpression(Path::from(
                         IdentifierReference {
-                            name: "array".to_string(),
+                            name: "array",
                             id: None,
                         },
                     ))),
@@ -675,7 +682,7 @@ mod tests {
             },
         ];
 
-        assert_input_with_program(input.as_bytes(), program);
+        assert_input_with_program(input, program);
     }
 
     #[test]
@@ -687,33 +694,33 @@ mod tests {
         let program: Program = vec![Statement::DeclarationStatement(
             Declaration::StructDeclaration(StructDecl {
                 ident: Identifier {
-                    name: "Test".to_string(),
+                    name: "Test",
                     id: None,
                 },
                 fields: vec![
                     StructField {
                         ident: Identifier {
-                            name: "foo".to_string(),
+                            name: "foo",
                             id: None,
                         },
                         r#type: TypeExpression::Path(Path::from(IdentifierReference {
-                            name: "String".to_string(),
+                            name: "String",
                             id: None,
                         })),
                     },
                     StructField {
                         ident: Identifier {
-                            name: "bar".to_string(),
+                            name: "bar",
                             id: None,
                         },
                         r#type: TypeExpression::Path(Path::from(IdentifierReference {
-                            name: "Number".to_string(),
+                            name: "Number",
                             id: None,
                         })),
                     },
                 ],
             }),
         )];
-        assert_input_with_program(input.as_bytes(), program);
+        assert_input_with_program(input, program);
     }
 }
