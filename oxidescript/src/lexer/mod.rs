@@ -358,6 +358,7 @@ mod tests {
                 Token::LParen,
                 Token::NumberLiteral("12"),
                 Token::Comma,
+                Token::NumberLiteral("34"),
                 Token::RParen,
                 Token::SemiColon,
                 Token::EOF
@@ -379,13 +380,19 @@ mod tests {
         let (_, result) = Lexer::lex_tokens(Span::new("\"foo\tbar\"")).unwrap();
         assert_eq!(result, vec![Token::StringLiteral("foo\tbar"), Token::EOF]);
 
-        let (_, result) = Lexer::lex_tokens(Span::new("\"foo\\\"bar\"")).unwrap();
-        assert_eq!(result, vec![Token::StringLiteral("foo\"bar"), Token::EOF]);
-
-        let (_, result) = Lexer::lex_tokens(Span::new("\"foo\\\"bar with 💖 emojis\"")).unwrap();
+        let (_, result) = Lexer::lex_tokens(Span::new(r#""foo\"bar""#)).unwrap();
         assert_eq!(
             result,
-            vec![Token::StringLiteral("foo\"bar with 💖 emojis"), Token::EOF]
+            vec![Token::StringLiteral(r#"foo\"bar"#), Token::EOF]
+        );
+
+        let (_, result) = Lexer::lex_tokens(Span::new(r#""foo\"bar with 💖 emojis""#)).unwrap();
+        assert_eq!(
+            result,
+            vec![
+                Token::StringLiteral(r#"foo\"bar with 💖 emojis"#),
+                Token::EOF
+            ]
         );
     }
 
