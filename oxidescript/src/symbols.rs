@@ -70,8 +70,15 @@ impl<'src> SymbolTable<'src> {
 pub struct SymbolId(pub usize);
 
 pub struct Symbol<'src> {
-    id: SymbolId,
-    identifier: Identifier<'src>,
-    scope: Scope,
-    r#type: Option<VariableType>,
+    pub id: SymbolId,
+    pub symbol_type: SymbolType,
+    pub identifier: Identifier<'src>,
+    pub scope: Scope,
+    pub r#type: Option<VariableType>,
+}
+
+pub enum SymbolType {
+    Value,
+    Type,
+    Module,
 }

@@ -1,20 +1,20 @@
-use nom::bytes::complete::take;
-use nom::combinator::verify;
 use nom::IResult;
 use nom::Parser;
+use nom::bytes::complete::take;
+use nom::combinator::verify;
 
 use crate::lexer::token::Token;
 use crate::lexer::tokens::Tokens;
 
 use super::ast::{InfixOperator, Precedence};
 
-fn take1(input: Tokens) -> IResult<Tokens, Tokens> {
+fn take1<'t, 'src>(input: Tokens<'t, 'src>) -> IResult<Tokens<'t, 'src>, Tokens<'t, 'src>> {
     take(1usize)(input)
 }
 
 macro_rules! tag_token (
     ($func_name: ident, $tag: expr) => (
-        pub fn $func_name(tokens: Tokens) -> IResult<Tokens, Tokens> {
+        pub fn $func_name<'t, 'src>(tokens: Tokens<'t, 'src>) -> IResult<Tokens<'t, 'src>, Tokens<'t, 'src>> {
             // println!("{:?} == {:?}", $tag, &tokens.tokens[0]);
             verify(take1, |t: &Tokens| {
                 t.tokens[0] == $tag

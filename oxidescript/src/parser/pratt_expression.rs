@@ -2,8 +2,8 @@ use crate::parser::Err;
 use nom::combinator::{map, opt};
 use nom::error::ErrorKind;
 use nom::sequence::delimited;
-use nom::{bytes::complete::take, IResult};
-use nom::{error_position, Parser};
+use nom::{IResult, bytes::complete::take};
+use nom::{Parser, error_position};
 
 use crate::lexer::tokens::Tokens;
 
@@ -17,19 +17,19 @@ use super::{
     expression::parse_atom_expression,
 };
 
-pub fn parse_pratt_expression(
-    input: Tokens,
+pub fn parse_pratt_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
     precedence: Precedence,
-) -> IResult<Tokens, Expression> {
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     let (rest, atom) = parse_atom_expression(input)?;
     parse_pratt_expression1(rest, precedence, atom)
 }
 
-fn parse_pratt_expression1<'src>(
-    input: Tokens<'src>,
+fn parse_pratt_expression1<'t, 'src>(
+    input: Tokens<'t, 'src>,
     precedence: Precedence,
     left: Expression<'src>,
-) -> IResult<Tokens<'src>, Expression<'src>> {
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     let (rest, found) = take(1usize)(input)?;
     if found.tokens.is_empty() {
         Ok((rest, left))
@@ -58,10 +58,10 @@ fn parse_pratt_expression1<'src>(
     }
 }
 
-fn parse_infix_expression<'src>(
-    input: Tokens<'src>,
+fn parse_infix_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
     left: Expression<'src>,
-) -> IResult<Tokens<'src>, Expression<'src>> {
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     let (rest, operator) = take(1usize)(input)?;
     if operator.tokens.is_empty() {
         Err(Err::Error(error_position!(input, ErrorKind::Tag)))
@@ -85,10 +85,10 @@ fn parse_infix_expression<'src>(
     }
 }
 
-fn parse_pratt_member_access_expression<'src>(
-    input: Tokens<'src>,
+fn parse_pratt_member_access_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
     left: Expression<'src>,
-) -> IResult<Tokens<'src>, Expression<'src>> {
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     map((period_tag, parse_identifier), |(_, right)| {
         Expression::MemberAccessExpression(MemberAccessExpr {
             lhs: Box::new(left.clone()),
@@ -98,10 +98,10 @@ fn parse_pratt_member_access_expression<'src>(
     .parse(input)
 }
 
-fn parse_pratt_call_expression<'src>(
-    input: Tokens<'src>,
+fn parse_pratt_call_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
     left: Expression<'src>,
-) -> IResult<Tokens<'src>, Expression<'src>> {
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     map(
         delimited(l_paren_tag, opt(parse_expressions), r_paren_tag),
         |args| {
@@ -114,10 +114,10 @@ fn parse_pratt_call_expression<'src>(
     .parse(input)
 }
 
-fn parse_pratt_index_expression<'src>(
-    input: Tokens<'src>,
+fn parse_pratt_index_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
     left: Expression<'src>,
-) -> IResult<Tokens<'src>, Expression<'src>> {
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     map(
         delimited(l_bracket_tag, parse_expression, r_bracket_tag),
         |index_expr| {

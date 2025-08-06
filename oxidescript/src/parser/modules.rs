@@ -1,9 +1,9 @@
 use nom::{
+    IResult, Parser,
     branch::alt,
     combinator::{map, opt},
     multi::{many0, separated_list1},
     sequence::delimited,
-    IResult, Parser,
 };
 
 use crate::lexer::{token::Token, tokens::Tokens};
@@ -16,7 +16,9 @@ use super::{
     use_tag,
 };
 
-pub fn parse_mod(input: Tokens) -> IResult<Tokens, ModuleDeclaration> {
+pub fn parse_mod<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, ModuleDeclaration<'src>> {
     map(
         (
             map(alt((mod_tag, extern_tag)), |t| match t.tokens[0] {
@@ -54,11 +56,13 @@ pub fn parse_mod(input: Tokens) -> IResult<Tokens, ModuleDeclaration> {
     .parse(input)
 }
 
-fn parse_module_content(input: Tokens) -> IResult<Tokens, Vec<Statement>> {
+fn parse_module_content<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Vec<Statement<'src>>> {
     many0(parse_statement).parse(input)
 }
 
-pub fn parse_use(input: Tokens) -> IResult<Tokens, Use> {
+pub fn parse_use<'t, 'src>(input: Tokens<'t, 'src>) -> IResult<Tokens<'t, 'src>, Use<'src>> {
     map((use_tag, parse_path, semicolon_tag), |(_, path, _)| Use {
         path,
         resolved_module: None,
@@ -67,7 +71,7 @@ pub fn parse_use(input: Tokens) -> IResult<Tokens, Use> {
     .parse(input)
 }
 
-pub fn parse_path(input: Tokens) -> IResult<Tokens, Path> {
+pub fn parse_path<'t, 'src>(input: Tokens<'t, 'src>) -> IResult<Tokens<'t, 'src>, Path<'src>> {
     map(
         separated_list1((colon_tag, colon_tag), parse_identifier_reference),
         |elements| Path {

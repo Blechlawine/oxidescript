@@ -1,19 +1,14 @@
 use std::{
     cell::RefCell,
-    collections::HashMap,
     fs::read_to_string,
     path::{Path, PathBuf},
-    process::{exit, Command},
+    process::{Command, exit},
 };
 
 use clap::Parser as ClapParser;
 use environment::JavascriptEnvironment;
 use oxidescript::{
-    checker::SemanticAnalyser,
-    compiler::Compiler,
-    lexer::{tokens::Tokens, Lexer},
-    loader::SourceLoader,
-    parser::Parser,
+    compiler::Compiler, lexer::Lexer, loader::SourceLoader, parser::Parser, resolver::Resolver,
 };
 use oxidescript_javascript_compiler::JavascriptCompiler;
 
@@ -136,33 +131,22 @@ fn compile_files(path: &Path, ctx: &Context, environment: JavascriptEnvironment)
         println!("Lexed: {:#?}", lexed);
     }
 
-    let lexed_tree = lexed
-        .iter()
-        .map(|(key, value)| match value {
-            Ok((_, lexed)) => (*key, Tokens::new(lexed)),
-            Err(err) => todo!("report lexer error"),
-        })
-        .collect::<HashMap<_, _>>();
-
-    let parsed = Parser::parse_tree(&lexed_tree);
+    let parsed = Parser::parse_tree(lexed);
     if ctx.verbose {
         println!("Parsed: {:#?}", &parsed);
     }
 
-    let parsed_tree = parsed
-        .iter()
-        .map(|(key, value)| match value {
-            Ok((_, parsed)) => (*key, parsed),
-            Err(err) => todo!("report parser error"),
-        })
-        .collect::<HashMap<_, _>>();
-
     let errors = RefCell::new(vec![]);
+
+    let mut resolver = Resolver::default();
+
+    resolver.resolve_program(parsed);
+
     // let mut analyser = SemanticAnalyser::new(&errors);
-    analyser.init();
+    // analyser.init();
     // TODO: do i want to load the environment like this or should the user put a extern module in
     // their source code depending on what environment they want to build for?
-    environment.load(&mut analyser);
+    // environment.load(&mut analyser);
     // let analyser = analyser.analyse_program(ast);
     // ast.check_type(&analyser);
 

@@ -5,14 +5,14 @@ use nom::Input;
 use super::token::Token;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Tokens<'src> {
-    pub tokens: &'src [Token<'src>],
+pub struct Tokens<'t, 'src> {
+    pub tokens: &'t [Token<'src>],
     pub start: usize,
     pub end: usize,
 }
 
-impl<'src> Tokens<'src> {
-    pub fn new(tokens: &'src [Token]) -> Self {
+impl<'t, 'src> Tokens<'t, 'src> {
+    pub fn new(tokens: &'t [Token<'src>]) -> Self {
         Self {
             tokens,
             start: 0,
@@ -21,10 +21,10 @@ impl<'src> Tokens<'src> {
     }
 }
 
-impl<'src> Input for Tokens<'src> {
-    type Item = &'src Token<'src>;
-    type Iter = ::std::slice::Iter<'src, Token<'src>>;
-    type IterIndices = Enumerate<::std::slice::Iter<'src, Token<'src>>>;
+impl<'t, 'src> Input for Tokens<'t, 'src> {
+    type Item = &'t Token<'src>;
+    type Iter = ::std::slice::Iter<'t, Token<'src>>;
+    type IterIndices = Enumerate<::std::slice::Iter<'t, Token<'src>>>;
 
     fn iter_indices(&self) -> Self::IterIndices {
         self.tokens.iter().enumerate()

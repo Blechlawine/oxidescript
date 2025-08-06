@@ -1,9 +1,9 @@
 use nom::{
+    IResult, Parser,
     branch::alt,
     combinator::{map, opt},
     multi::many0,
     sequence::terminated,
-    IResult, Parser,
 };
 
 use crate::lexer::tokens::Tokens;
@@ -18,7 +18,9 @@ use super::{
     r#type::parse_type_expression,
 };
 
-pub fn parse_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
+pub fn parse_declaration<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Declaration<'src>> {
     // println!("parse_declaration");
     alt((
         parse_let_declaration,
@@ -32,15 +34,21 @@ pub fn parse_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
     .parse(input)
 }
 
-fn parse_use_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
+fn parse_use_declaration<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Declaration<'src>> {
     map(parse_use, Declaration::UseDeclaration).parse(input)
 }
 
-fn parse_mod_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
+fn parse_mod_declaration<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Declaration<'src>> {
     map(parse_mod, Declaration::ModDeclaration).parse(input)
 }
 
-fn parse_const_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
+fn parse_const_declaration<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Declaration<'src>> {
     // println!("parse_const_declaration");
     terminated(
         map(
@@ -55,7 +63,9 @@ fn parse_const_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
     .parse(input)
 }
 
-fn parse_let_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
+fn parse_let_declaration<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Declaration<'src>> {
     // println!("parse_let_declaration");
     terminated(
         map(
@@ -70,7 +80,9 @@ fn parse_let_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
     .parse(input)
 }
 
-fn parse_function_declaration_without_body(input: Tokens) -> IResult<Tokens, Declaration> {
+fn parse_function_declaration_without_body<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Declaration<'src>> {
     // println!("parse_function_declaration_without_body {:?}", input);
     map(
         (
@@ -96,7 +108,9 @@ fn parse_function_declaration_without_body(input: Tokens) -> IResult<Tokens, Dec
     .parse(input)
 }
 
-fn parse_function_declaration_with_body(input: Tokens) -> IResult<Tokens, Declaration> {
+fn parse_function_declaration_with_body<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Declaration<'src>> {
     // println!("parse_function_declaration");
     map(
         (
@@ -124,7 +138,9 @@ fn parse_function_declaration_with_body(input: Tokens) -> IResult<Tokens, Declar
     .parse(input)
 }
 
-fn parse_struct_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
+fn parse_struct_declaration<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Declaration<'src>> {
     map(
         (
             struct_tag,
@@ -138,7 +154,9 @@ fn parse_struct_declaration(input: Tokens) -> IResult<Tokens, Declaration> {
     .parse(input)
 }
 
-fn parse_struct_field(input: Tokens) -> IResult<Tokens, StructField> {
+fn parse_struct_field<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, StructField<'src>> {
     map(
         (
             parse_identifier,

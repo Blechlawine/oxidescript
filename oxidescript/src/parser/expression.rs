@@ -4,8 +4,8 @@ use nom::combinator::opt;
 use nom::error::ErrorKind;
 use nom::multi::many0;
 use nom::sequence::{delimited, pair, preceded};
-use nom::{branch::alt, combinator::map, error_position, IResult};
 use nom::{Err, Parser};
+use nom::{IResult, branch::alt, combinator::map, error_position};
 
 use crate::lexer::token::Token;
 use crate::lexer::tokens::Tokens;
@@ -16,11 +16,15 @@ use super::modules::parse_path;
 use super::pratt_expression::parse_pratt_expression;
 use super::{ast::Expression, atoms::*, parse_identifier, parse_literal};
 
-pub fn parse_expression(input: Tokens) -> IResult<Tokens, Expression> {
+pub fn parse_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     parse_pratt_expression(input, Precedence::PLowest)
 }
 
-pub fn parse_expressions(input: Tokens) -> IResult<Tokens, Vec<Expression>> {
+pub fn parse_expressions<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Vec<Expression<'src>>> {
     map(
         pair(
             parse_expression,
@@ -31,7 +35,9 @@ pub fn parse_expressions(input: Tokens) -> IResult<Tokens, Vec<Expression>> {
     .parse(input)
 }
 
-pub fn parse_atom_expression(input: Tokens) -> IResult<Tokens, Expression> {
+pub fn parse_atom_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     alt((
         parse_literal_expression,
         parse_path_expression,
@@ -45,18 +51,24 @@ pub fn parse_atom_expression(input: Tokens) -> IResult<Tokens, Expression> {
     .parse(input)
 }
 
-fn parse_literal_expression(input: Tokens) -> IResult<Tokens, Expression> {
+fn parse_literal_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     map(parse_literal, |literal| {
         Expression::LiteralExpression(literal)
     })
     .parse(input)
 }
 
-fn parse_path_expression(input: Tokens) -> IResult<Tokens, Expression> {
+fn parse_path_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     map(parse_path, Expression::PathExpression).parse(input)
 }
 
-fn parse_unary_expression(input: Tokens) -> IResult<Tokens, Expression> {
+fn parse_unary_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     let (rest1, unary) =
         alt((plus_tag, minus_tag, logical_not_tag, bitwise_not_tag)).parse(input)?;
     if unary.tokens.is_empty() {
@@ -97,11 +109,15 @@ fn parse_unary_expression(input: Tokens) -> IResult<Tokens, Expression> {
     }
 }
 
-fn parse_paren_expression(input: Tokens) -> IResult<Tokens, Expression> {
+fn parse_paren_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     delimited(l_paren_tag, parse_expression, r_paren_tag).parse(input)
 }
 
-fn parse_array_expression(input: Tokens) -> IResult<Tokens, Expression> {
+fn parse_array_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     map(
         delimited(
             l_bracket_tag,
@@ -113,7 +129,9 @@ fn parse_array_expression(input: Tokens) -> IResult<Tokens, Expression> {
     .parse(input)
 }
 
-fn parse_block_expression(input: Tokens) -> IResult<Tokens, Expression> {
+fn parse_block_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     map(
         delimited(l_squirly_tag, parse_block, r_squirly_tag),
         |block| Expression::BlockExpression(Box::new(block)),
@@ -121,7 +139,9 @@ fn parse_block_expression(input: Tokens) -> IResult<Tokens, Expression> {
     .parse(input)
 }
 
-fn parse_if_expression(input: Tokens) -> IResult<Tokens, Expression> {
+fn parse_if_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     map(
         (
             if_tag,
@@ -169,7 +189,9 @@ fn parse_if_expression(input: Tokens) -> IResult<Tokens, Expression> {
     ).parse(input)
 }
 
-fn parse_for_expression(input: Tokens) -> IResult<Tokens, Expression> {
+fn parse_for_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     map(
         (
             for_tag,
@@ -193,6 +215,8 @@ fn parse_for_expression(input: Tokens) -> IResult<Tokens, Expression> {
     .parse(input)
 }
 
-fn empty_boxed_vec(input: Tokens) -> IResult<Tokens, Vec<Expression>> {
+fn empty_boxed_vec<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Vec<Expression<'src>>> {
     Ok((input, vec![]))
 }

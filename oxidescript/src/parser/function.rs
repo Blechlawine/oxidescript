@@ -1,9 +1,9 @@
 use nom::{
+    IResult, Parser,
     branch::alt,
     combinator::{map, opt},
     multi::{many0, separated_list0},
     sequence::delimited,
-    IResult, Parser,
 };
 
 use crate::lexer::tokens::Tokens;
@@ -14,15 +14,19 @@ use super::{
     comma_tag,
     expression::parse_expression,
     parse_identifier,
-    r#type::parse_type_expression,
     statement::parse_statement,
+    r#type::parse_type_expression,
 };
 
-pub fn parse_parameters(input: Tokens) -> IResult<Tokens, Vec<Parameter>> {
+pub fn parse_parameters<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Vec<Parameter<'src>>> {
     separated_list0(comma_tag, parse_parameter).parse(input)
 }
 
-pub fn parse_parameter(input: Tokens) -> IResult<Tokens, Parameter> {
+pub fn parse_parameter<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Parameter<'src>> {
     map(
         (parse_identifier, colon_tag, parse_type_expression),
         |(name, _, r#type)| Parameter { name, r#type },
@@ -30,7 +34,9 @@ pub fn parse_parameter(input: Tokens) -> IResult<Tokens, Parameter> {
     .parse(input)
 }
 
-fn parse_return_expression(input: Tokens) -> IResult<Tokens, Expression> {
+fn parse_return_expression<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Expression<'src>> {
     map(
         delimited(return_tag, parse_expression, semicolon_tag),
         |expr| expr,
@@ -38,7 +44,7 @@ fn parse_return_expression(input: Tokens) -> IResult<Tokens, Expression> {
     .parse(input)
 }
 
-pub fn parse_block(input: Tokens) -> IResult<Tokens, Block> {
+pub fn parse_block<'t, 'src>(input: Tokens<'t, 'src>) -> IResult<Tokens<'t, 'src>, Block<'src>> {
     map(
         (
             many0(parse_statement),

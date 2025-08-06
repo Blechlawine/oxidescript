@@ -29,7 +29,7 @@ use self::ast::{Identifier, Literal, Number, NumberBase, Program};
 use self::atoms::*;
 use self::statement::parse_statement;
 
-fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
+fn parse_literal<'t, 'src>(input: Tokens<'t, 'src>) -> IResult<Tokens<'t, 'src>, Literal> {
     let (rest, found) = take(1usize)(input)?;
     if found.tokens.is_empty() {
         Err(Err::Error(Error::new(input, ErrorKind::Tag)))
@@ -71,7 +71,7 @@ fn parse_literal(input: Tokens) -> IResult<Tokens, Literal> {
     }
 }
 
-fn parse_ident_name(input: Tokens) -> IResult<Tokens, &str> {
+fn parse_ident_name<'t, 'src>(input: Tokens<'t, 'src>) -> IResult<Tokens<'t, 'src>, &'src str> {
     let (rest, found) = take(1usize)(input)?;
     // dbg!(rest, found, input);
     if found.tokens.is_empty() {
@@ -84,11 +84,15 @@ fn parse_ident_name(input: Tokens) -> IResult<Tokens, &str> {
     }
 }
 
-fn parse_identifier(input: Tokens) -> IResult<Tokens, Identifier> {
+fn parse_identifier<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, Identifier<'src>> {
     map(parse_ident_name, |name| Identifier { name, id: None }).parse(input)
 }
 
-fn parse_identifier_reference(input: Tokens) -> IResult<Tokens, IdentifierReference> {
+fn parse_identifier_reference<'t, 'src>(
+    input: Tokens<'t, 'src>,
+) -> IResult<Tokens<'t, 'src>, IdentifierReference<'src>> {
     map(parse_ident_name, |name| IdentifierReference {
         name,
         id: None,
@@ -96,7 +100,7 @@ fn parse_identifier_reference(input: Tokens) -> IResult<Tokens, IdentifierRefere
     .parse(input)
 }
 
-fn parse_program(input: Tokens) -> IResult<Tokens, Program> {
+fn parse_program<'t, 'src>(input: Tokens<'t, 'src>) -> IResult<Tokens<'t, 'src>, Program<'src>> {
     // println!("parse_program");
     terminated(many0(parse_statement), eof_tag).parse(input)
 }
@@ -104,14 +108,15 @@ fn parse_program(input: Tokens) -> IResult<Tokens, Program> {
 pub struct Parser;
 
 impl Parser {
-    pub fn parse_tree<'src>(tree: LexedSourceTree<'src>) -> ParsedSourceTree<'src> {
+    pub fn parse_tree(tree: LexedSourceTree) -> ParsedSourceTree {
         let mut output = HashMap::new();
         for (path, source) in tree {
             let tokens = Tokens::new(&source);
             let path = path
                 .into_iter()
                 .map(|p| {
-                    let p = Tokens::new(&[p]);
+                    let binding = [p];
+                    let p = Tokens::new(&binding);
                     let (_, parsed) = parse_identifier_reference(p).unwrap();
                     parsed
                 })
@@ -122,7 +127,7 @@ impl Parser {
         output
     }
 
-    pub fn parse(tokens: Tokens) -> IResult<Tokens, Program> {
+    pub fn parse<'t, 'src>(tokens: Tokens<'t, 'src>) -> IResult<Tokens<'t, 'src>, Program<'src>> {
         parse_program(tokens)
     }
 }

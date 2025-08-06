@@ -1,8 +1,9 @@
 use crate::{
+    loader::ParsedSourceTree,
     parser::ast::{
         Block, CallExpr, Declaration, Expression, ForExpr, FunctionDecl, Identifier, IfExpr,
-        IndexExpr, InfixExpr, MemberAccessExpr, ModuleDeclaration, Path, Program, Statement,
-        StructDecl, TypeExpression, UnaryExpr, Use,
+        IndexExpr, InfixExpr, MemberAccessExpr, ModuleDeclaration, Path, Statement, StructDecl,
+        TypeExpression, UnaryExpr, Use,
     },
     scope::{ParentScopes, Scope},
     symbols::SymbolTable,
@@ -15,12 +16,25 @@ pub struct Resolver<'src> {
     pub symbols: SymbolTable<'src>,
 }
 
-impl<'src> Resolver<'src> {
-    pub fn resolve_program(source: Program) -> Self {
-        let mut resolver = Self::default();
-        let scope = resolver.scopes.global_scope();
-        resolver.resolve_vec_of_statements(source, scope);
-        resolver
+impl Resolver<'_> {
+    pub fn resolve_program(&mut self, tree: ParsedSourceTree) {
+        let scope = self.scopes.global_scope();
+        for (module, source) in tree {
+            self.resolve_module(module, source, scope);
+        }
+        // self.resolve_vec_of_statements(source, scope);
+    }
+
+    fn resolve_module(&mut self, module: Path, source: Vec<Statement>, scope: Scope) {
+        let scope = self.scopes.new_scope();
+        // self.symbols.insert(Symbol {
+        //     id: self.symbols.next_symbol_id(),
+        //     symbol_type: SymbolType::Module,
+        //     identifier: module,
+        //     scope,
+        //     r#type: None,
+        // });
+        self.resolve_vec_of_statements(source, scope);
     }
 
     fn resolve_vec_of_statements(&mut self, statements: Vec<Statement>, scope: Scope) {
