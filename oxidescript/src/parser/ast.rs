@@ -12,7 +12,7 @@ pub enum ModuleDeclaration<'src> {
     },
     Intern {
         path: Path<'src>,
-        /// this is None for modules in separate files, only being populated with semantic analysis
+        /// this is None for modules in separate files, only being populated by the resolver
         content: Option<Program<'src>>,
     },
 }
@@ -20,7 +20,7 @@ pub enum ModuleDeclaration<'src> {
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub struct Path<'src> {
     pub elements: Vec<IdentifierReference<'src>>,
-    /// this path is populated in semantic analysis
+    /// this path is populated by the resolver
     pub full_path: Option<Vec<Identifier<'src>>>,
 }
 

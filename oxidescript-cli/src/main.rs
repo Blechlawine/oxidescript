@@ -140,7 +140,7 @@ fn compile_files(path: &Path, ctx: &Context, environment: JavascriptEnvironment)
 
     let mut resolver = Resolver::default();
 
-    resolver.resolve_program(parsed);
+    let main_module = resolver.resolve_program(parsed);
 
     // let mut analyser = SemanticAnalyser::new(&errors);
     // analyser.init();
@@ -151,7 +151,7 @@ fn compile_files(path: &Path, ctx: &Context, environment: JavascriptEnvironment)
     // ast.check_type(&analyser);
 
     let compiler = JavascriptCompiler::new();
-    let compiled = compiler.compile(ast);
+    let compiled = compiler.compile(main_module);
     if ctx.verbose {
         println!("{}", compiled);
     }
